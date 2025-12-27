@@ -1,8 +1,28 @@
+"use client";
+
+import Image from "next/image";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+
 export default function HomePage() {
+  const router = useRouter();
+
+  const handleLogout = () => {
+    router.push("/login");
+  };
+
   return (
-    <div>
-      <h1>Home Page</h1>
-      <p>This is your protected home page</p>
-    </div>
+    <main className="min-h-screen bg-pink-50">
+      <header className="flex justify-between items-center px-12 py-8">
+ 
+      </header>
+
+      <section className="flex items-center justify-center py-24">
+        <div className="bg-white rounded-3xl shadow-lg p-12 text-center">
+          <h1 className="text-4xl font-bold mb-4">Welcome to Evently!</h1>
+          <p className="text-gray-600">Your event management dashboard</p>
+        </div>
+      </section>
+    </main>
   );
 }
