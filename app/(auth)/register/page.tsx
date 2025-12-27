@@ -28,7 +28,7 @@ export default function RegisterPage() {
         </div>
       </header>
 
-      <section className="grid grid-cols-2 gap-16 px-12 py-16 items-center">
+      <section className="grid grid-cols-2 gap-16 px-12 py-0 items-center">
         
         <div className="flex justify-center">
           <Image
