@@ -1,36 +1,45 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 
 export default function LandingPage() {
   return (
     <main className="min-h-screen bg-pink-50">
-      
+
       <header className="flex justify-between items-center px-12 py-8">
-   
-        <Image
-          src="/evently logo.png"
-          alt="Evently logo"
-          width={64}
-          height={64}
-          className="object-contain"
-        />
+        <Link href="/">
+          <Image
+            src="/evently logo.png"
+            alt="Evently logo"
+            width={64}
+            height={64}
+            className="object-contain"
+          />
+        </Link>
 
         <nav className="flex gap-12 text-sm">
-          <a href="home">Home</a>
-          <a href="features">Features</a>
-          <a href="pricing">Pricing</a>
-          <a href="about">About Us</a>
+          <Link href="/">Home</Link>
+          <Link href="/features">Features</Link>
+          <Link href="/pricing">Pricing</Link>
+          <Link href="/about">About Us</Link>
         </nav>
 
         <div className="flex gap-4">
-          <button className="px-5 py-2 text-sm">Sign Up</button>
-          <button className="px-6 py-2 rounded-full bg-rose-900 text-white text-sm">Log in</button>
+          <Link href="/register" className="px-5 py-2 text-sm">
+            Sign Up
+          </Link>
+          <Link 
+            href="/login" 
+            className="px-6 py-2 rounded-full bg-rose-900 text-white text-sm"
+          >
+            Log in
+          </Link>
         </div>
       </header>
-      
+
       <section className="grid grid-cols-2 gap-16 px-12 py-16">
-        
+  
         <div className="space-y-6">
           <h1 className="text-6xl font-bold leading-tight">
             Plan unforgettable events with ease.
@@ -42,16 +51,20 @@ export default function LandingPage() {
           </p>
 
           <div className="space-y-2">
-            <button className="px-7 py-3 bg-rose-900 text-white text-sm font-semibold rounded">
+            <Link 
+              href="/register" 
+              className="inline-block px-7 py-3 bg-rose-900 text-white text-sm font-semibold rounded hover:bg-rose-800 transition"
+            >
               Get Started
-            </button>
+            </Link>
             <div>
-              <button className="text-sm underline">Explore more</button>
+              <Link href="/features" className="text-sm underline">
+                Explore more
+              </Link>
             </div>
           </div>
         </div>
 
-     
         <div className="relative h-96">
           <Image
             src="/ballon.png"
@@ -69,7 +82,6 @@ export default function LandingPage() {
           />
         </div>
       </section>
-
     </main>
   );
 }
