@@ -18,15 +18,59 @@ export default function RegisterForm() {
   });
 
   const onSubmit = (data: RegisterFormData) => {
-    console.log("Register data:", data);
-    alert("Registration successful! Redirecting to login...");
-    router.push("/login");
+    const backendBase = process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:5000";
+
+    (async () => {
+      try {
+        const res = await fetch(`${backendBase}/api/auth/register`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        });
+
+        const json = await res.json();
+        if (res.ok) {
+          alert("Registration successful! Redirecting to login...");
+          router.push("/login");
+        } else {
+          alert(json?.message || "Registration failed");
+        }
+      } catch (err) {
+        console.error(err);
+        alert("Registration failed: " + (err as any).message);
+      }
+    })();
   };
 
   return (
     <div className="bg-white rounded-3xl shadow-lg p-10 w-full max-w-md">
       <form onSubmit={handleSubmit(onSubmit)}>
         <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">First name</label>
+            <input
+              {...register("firstName")}
+              type="text"
+              placeholder="First name"
+              className="w-full px-4 py-2 rounded-lg bg-gray-100 border-0 focus:outline-none focus:ring-2 focus:ring-rose-900"
+            />
+            {errors.firstName && (
+              <span className="text-red-600 text-sm mt-1 block">{errors.firstName.message}</span>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Last name</label>
+            <input
+              {...register("lastName")}
+              type="text"
+              placeholder="Last name"
+              className="w-full px-4 py-2 rounded-lg bg-gray-100 border-0 focus:outline-none focus:ring-2 focus:ring-rose-900"
+            />
+            {errors.lastName && (
+              <span className="text-red-600 text-sm mt-1 block">{errors.lastName.message}</span>
+            )}
+          </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">
               Email
