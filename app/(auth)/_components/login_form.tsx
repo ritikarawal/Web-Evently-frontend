@@ -5,7 +5,7 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { LoginFormData, loginSchema } from "@/lib/authSchema";
+import { LoginFormData, loginSchema } from "@/app/(auth)/authSchema";
 
 export default function LoginForm() {
   const router = useRouter();

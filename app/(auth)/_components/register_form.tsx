@@ -2,7 +2,7 @@
 // import z from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { RegisterFormData, registerSchema } from "@/lib/authSchema";
+import { RegisterFormData, registerSchema } from "@/app/(auth)/authSchema";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
