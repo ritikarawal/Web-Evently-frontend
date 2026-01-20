@@ -4,7 +4,7 @@ import RegisterForm from "../_components/register_form";
 
 export default function RegisterPage() {
   return (
-    <main className="min-h-screen bg-pink-50">
+    <main className="min-h-screen bg-pink-50 text-black">
       
       <header className="flex justify-between items-center px-12 py-8">
         <Image
@@ -15,7 +15,7 @@ export default function RegisterPage() {
           className="object-contain"
         />
 
-        <nav className="flex gap-12 text-sm">
+        <nav className="flex gap-12 text-sm text-black">
           <Link href="/">Home</Link>
           <Link href="/">Features</Link>
           <Link href="/">Pricing</Link>
@@ -44,7 +44,6 @@ export default function RegisterPage() {
           <RegisterForm />
         </div>
       </section>
-
     </main>
   );
 }

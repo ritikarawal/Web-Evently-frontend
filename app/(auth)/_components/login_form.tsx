@@ -6,6 +6,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { LoginFormData, loginSchema } from "@/app/(auth)/authSchema";
+import { useState } from "react";
+import { login } from "@/lib/api/auth";
+import { setAuthToken, setUserData } from "@/lib/cookie";
 
 export default function LoginForm() {
   const router = useRouter();
@@ -18,31 +21,23 @@ export default function LoginForm() {
     resolver: zodResolver(loginSchema)
   });
 
-  const onSubmit = async (data: LoginFormData) => {
-    console.log("Login data:", data);
-    
-    const backendBase = process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:5050";
+  const [error, setError] = useState<string>("");
 
-    try {
-      const res = await fetch(`${backendBase}/api/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-
-      const json = await res.json();
-      if (res.ok && json.token) {
-        // Store token in localStorage or cookie
-        localStorage.setItem("auth_token", json.token);
-        localStorage.setItem("user", JSON.stringify(json.data));
-        alert("Login successful!");
-        router.push("/home");
-      } else {
-        alert(json?.message || "Login failed");
-      }
-    } catch (err) {
-      console.error(err);
-      alert("Login failed: " + (err as any).message);
+  async function onSubmit(data: LoginFormData) {
+    setError("");
+    try{
+      
+      const result= await login(data)    
+      await setAuthToken( result.token );
+      await setUserData( result.data );
+       if (result.success) {
+                router.push("/home");
+            } else {
+                throw new Error(result.message || "Registration failed");
+            }
+      
+    }catch(err: Error | any){
+      setError(err.message || "Login failed");
     }
   };
 

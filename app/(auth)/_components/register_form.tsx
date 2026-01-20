@@ -1,10 +1,12 @@
 "use client";
 // import z from "zod";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
+import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { RegisterFormData, registerSchema } from "@/app/(auth)/authSchema";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { handleRegister } from "@/lib/actions/auth-actions";
 
 export default function RegisterForm() {
   const router = useRouter();
@@ -16,35 +18,30 @@ export default function RegisterForm() {
   } = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema)
   });
+  const [error, setError] = useState<string>("");
 
-  const onSubmit = (data: RegisterFormData) => {
-    const backendBase = process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:5000";
-
-    (async () => {
-      try {
-        const res = await fetch(`${backendBase}/api/auth/register`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(data),
-        });
-
-        const json = await res.json();
-        if (res.ok) {
-          alert("Registration successful! Redirecting to login...");
-          router.push("/login");
-        } else {
-          alert(json?.message || "Registration failed");
+  const onSubmit = async (data: RegisterFormData) => {
+        setError("");
+        try {
+            const response = await handleRegister(data);
+            if (response.success && response.redirect) {
+              router.push(response.redirect);
+            } else if (!response.success) {
+              setError(response.message || "Registration failed");
+            }
+        } catch (err: any) {
+            setError(err.message || "Registration failed");
         }
-      } catch (err) {
-        console.error(err);
-        alert("Registration failed: " + (err as any).message);
-      }
-    })();
-  };
+    };
 
   return (
     <div className="bg-white rounded-3xl shadow-lg p-10 w-full max-w-md">
       <form onSubmit={handleSubmit(onSubmit)}>
+        {error && (
+          <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-sm">
+            {error}
+          </div>
+        )}
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">First name</label>

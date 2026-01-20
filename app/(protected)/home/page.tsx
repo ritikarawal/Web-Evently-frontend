@@ -12,7 +12,7 @@ export default function HomePage() {
   };
 
   return (
-    <main className="min-h-screen bg-pink-50">
+    <main className="min-h-screen f bg-pink-50">
       <header className="flex justify-between items-center px-12 py-8">
  
       </header>
@@ -20,7 +20,7 @@ export default function HomePage() {
       <section className="flex items-center justify-center py-24">
         <div className="bg-white rounded-3xl shadow-lg p-12 text-center">
           <h1 className="text-4xl font-bold mb-4">Welcome to Evently!</h1>
-          <p className="text-gray-600">Your event management dashboard</p>
+          <p className="text-grey">Your event management dashboard</p>
         </div>
       </section>
     </main>
