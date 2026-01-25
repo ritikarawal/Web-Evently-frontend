@@ -12,7 +12,7 @@ export default function HomePage() {
   };
 
   return (
-    <main className="min-h-screen f bg-pink-50">
+    <main className="min-h-screen f bg-pink-50 text-black">
       <header className="flex justify-between items-center px-12 py-8">
  
       </header>
