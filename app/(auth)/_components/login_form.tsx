@@ -6,6 +6,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { LoginFormData, loginSchema } from "@/app/(auth)/authSchema";
+import { useState } from "react";
+import { login } from "@/lib/api/auth";
+import { setAuthToken, setUserData } from "@/lib/cookie";
 
 export default function LoginForm() {
   const router = useRouter();
@@ -18,51 +21,43 @@ export default function LoginForm() {
     resolver: zodResolver(loginSchema)
   });
 
-  const onSubmit = async (data: LoginFormData) => {
-    console.log("Login data:", data);
-    
-    const backendBase = process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:5050";
+  const [error, setError] = useState<string>("");
 
-    try {
-      const res = await fetch(`${backendBase}/api/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-
-      const json = await res.json();
-      if (res.ok && json.token) {
-        // Store token in localStorage or cookie
-        localStorage.setItem("auth_token", json.token);
-        localStorage.setItem("user", JSON.stringify(json.data));
-        alert("Login successful!");
-        router.push("/home");
-      } else {
-        alert(json?.message || "Login failed");
-      }
-    } catch (err) {
-      console.error(err);
-      alert("Login failed: " + (err as any).message);
+  async function onSubmit(data: LoginFormData) {
+    setError("");
+    try{
+      
+      const result= await login(data)    
+      await setAuthToken( result.token );
+      await setUserData( result.data );
+       if (result.success) {
+                router.push("/home");
+            } else {
+                throw new Error(result.message || "Registration failed");
+            }
+      
+    }catch(err: Error | any){
+      setError(err.message || "Login failed");
     }
   };
 
   return (
-    <div className="bg-white rounded-3xl shadow-lg p-10 w-full max-w-md">
-      <h2 className="text-3xl font-bold text-center mb-8 text-gray-900">
-        Welcome to Evently!
+    <div className="bg-white rounded-3xl shadow-lg p-8 w-full max-w-md">
+      <h2 className="text-2xl font-semibold text-center mb-6 text-gray-900">
+        Welcome back
       </h2>
 
       <form onSubmit={handleSubmit(onSubmit)}>
-        <div className="space-y-6">
+        <div className="space-y-5">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-xs font-medium text-gray-700 mb-2">
               Email
             </label>
             <input
               {...register("email")}
               type="text"
               placeholder="Enter your email"
-              className="w-full px-4 py-3 rounded-lg bg-gray-100 border-0 focus:outline-none focus:ring-2 focus:ring-rose-900"
+              className="w-full px-3 py-2.5 rounded-lg bg-gray-100 border-0 focus:outline-none focus:ring-2 focus:ring-rose-900"
             />
             {errors.email && (
               <span className="text-red-600 text-sm mt-1 block">
@@ -72,14 +67,14 @@ export default function LoginForm() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-xs font-medium text-gray-700 mb-2">
               Password
             </label>
             <input
               {...register("password")}
               type="password"
               placeholder="Enter your Password"
-              className="w-full px-4 py-3 rounded-lg bg-gray-100 border-0 focus:outline-none focus:ring-2 focus:ring-rose-900"
+              className="w-full px-3 py-2.5 rounded-lg bg-gray-100 border-0 focus:outline-none focus:ring-2 focus:ring-rose-900"
             />
             {errors.password && (
               <span className="text-red-600 text-sm mt-1 block">
@@ -91,7 +86,7 @@ export default function LoginForm() {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full py-3 bg-rose-900 text-white font-semibold rounded-lg hover:bg-rose-800 transition mt-8 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full py-2.5 bg-rose-900 text-white font-semibold rounded-lg hover:bg-rose-800 transition mt-6 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSubmitting ? "Logging in..." : "Log in"}
           </button>

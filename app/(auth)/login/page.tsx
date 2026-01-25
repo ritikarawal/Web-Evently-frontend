@@ -4,7 +4,7 @@ import LoginForm from "../_components/login_form";
 
 export default function LoginPage() {
   return (
-    <main className="min-h-screen bg-pink-50">
+    <main className="min-h-screen bg-pink-50 text-black">
       
       <header className="flex justify-between items-center px-12 py-8">
         <Image

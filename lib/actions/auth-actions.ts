@@ -10,7 +10,7 @@ export const handleRegister = async (data: RegisterFormData) => {
             return {
                 success: true,
                 message: 'Registration successful',
-                data: response.data
+                redirect: '/login'
             }
         }
         return {

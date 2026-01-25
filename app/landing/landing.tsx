@@ -5,7 +5,7 @@ import Link from "next/link";
 
 export default function LandingPage() {
   return (
-    <main className="min-h-screen bg-pink-50">
+    <main className="min-h-screen bg-pink-50 text-black">
 
       <header className="flex justify-between items-center px-12 py-8">
         <Link href="/">
@@ -18,7 +18,7 @@ export default function LandingPage() {
           />
         </Link>
 
-        <nav className="flex gap-12 text-sm">
+        <nav className="flex gap-12 text-black-sm">
           <Link href="/">Home</Link>
           <Link href="/features">Features</Link>
           <Link href="/pricing">Pricing</Link>
