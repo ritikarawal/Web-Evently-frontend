@@ -3,9 +3,15 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { logout } from "@/lib/api/auth";
 
 export default function HomePage() {
   const router = useRouter();
+
+  const handleLogout = () => {
+    logout();
+    router.push("/login");
+  };
 
   const eventCategories = [
     {
@@ -105,6 +111,12 @@ export default function HomePage() {
                 </svg>
               </div>
               <span className="font-medium text-gray-800">Profile</span>
+            </button>
+            <button
+              onClick={handleLogout}
+              className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-full shadow-md hover:shadow-lg transition-all duration-300"
+            >
+              Logout
             </button>
           </div>
         </div>

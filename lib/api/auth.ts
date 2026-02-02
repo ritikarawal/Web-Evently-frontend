@@ -102,3 +102,44 @@ export const getProfile = async () => {
         throw new Error(message);
     }
 }
+
+export const logout = () => {
+    // Clear auth cookies on logout
+    if (typeof document !== "undefined") {
+        document.cookie = "auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
+        document.cookie = "user_data=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
+    }
+}
+
+export const updateProfilePicture = async (file: File) => {
+    try {
+        const formData = new FormData();
+        formData.append("profilePicture", file);
+        
+        const response = await axios.post("/api/auth/user/profile-picture", formData, {
+            headers: {
+                "Content-Type": "multipart/form-data"
+            }
+        });
+        return response.data;
+    } catch (err: Error | unknown) {
+        let message = "Failed to update profile picture";
+        interface AxiosErrorShape {
+            response?: {
+                data?: {
+                    message?: string;
+                };
+            };
+            message?: string;
+        }
+        if (err && typeof err === "object") {
+            const errorObj = err as AxiosErrorShape;
+            if ("response" in err && typeof errorObj.response?.data?.message === "string") {
+                message = errorObj.response!.data!.message!;
+            } else if ("message" in err && typeof errorObj.message === "string") {
+                message = errorObj.message!;
+            }
+        }
+        throw new Error(message);
+    }
+}

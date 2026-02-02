@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { logout } from "@/lib/api/auth";
 import {
   AdminUserPayload,
   createUser,
@@ -18,6 +20,7 @@ interface UserItem {
   email?: string;
   role?: "user" | "admin";
   phoneNumber?: string;
+  profilePicture?: string;
 }
 
 const initialFormState: AdminUserPayload = {
@@ -33,25 +36,34 @@ const initialFormState: AdminUserPayload = {
 };
 
 export default function AdminDashboardPage() {
+  const router = useRouter();
   const [users, setUsers] = useState<UserItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [formData, setFormData] = useState<AdminUserPayload>(initialFormState);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string>("");
 
   const buttonLabel = useMemo(
     () => (editingId ? "Update User" : "Create User"),
     [editingId]
   );
 
+  const handleLogout = () => {
+    logout();
+    router.push("/login");
+  };
+
   const loadUsers = async () => {
     setLoading(true);
     setError("");
     try {
       const response = await getAllUsers();
+      console.log('getAllUsers response:', response);
       setUsers(response.data || []);
     } catch (err: unknown) {
+      console.error('getAllUsers error:', err);
       if (err instanceof Error) {
         setError(err.message || "Failed to load users");
       } else {
@@ -72,11 +84,21 @@ export default function AdminDashboardPage() {
 
   const handleFileChange = (file: File | null) => {
     setFormData((prev) => ({ ...prev, image: file }));
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      setImagePreview("");
+    }
   };
 
   const resetForm = () => {
     setEditingId(null);
     setFormData(initialFormState);
+    setImagePreview("");
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -137,9 +159,17 @@ export default function AdminDashboardPage() {
           <h1 className="text-2xl font-bold">Admin Dashboard</h1>
           <p className="text-sm text-gray-600">Manage users and roles</p>
         </div>
-        <Link href="/home" className="text-sm text-rose-900 hover:underline">
-          ← Back to Home
-        </Link>
+        <div className="flex gap-4">
+          <Link href="/home" className="text-sm text-rose-900 hover:underline">
+            ← Back to Home
+          </Link>
+          <button
+            onClick={handleLogout}
+            className="text-sm text-red-600 hover:underline"
+          >
+            Logout
+          </button>
+        </div>
       </header>
 
       <section className="grid grid-cols-1 lg:grid-cols-3 gap-8 px-8 py-8">
@@ -216,6 +246,21 @@ export default function AdminDashboardPage() {
                   onChange={(e) => handleFileChange(e.target.files?.[0] || null)}
                   className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
                 />
+                {formData.image && (
+                  <div className="text-xs text-gray-600">
+                    Selected: {formData.image.name}
+                  </div>
+                )}
+                {imagePreview && (
+                  <div className="relative w-24 h-24 rounded-lg overflow-hidden border border-gray-200">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={imagePreview}
+                      alt="Preview"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                )}
               </div>
 
               <div className="flex gap-3">
@@ -272,10 +317,28 @@ export default function AdminDashboardPage() {
                     {users.map((user) => (
                       <tr key={user._id} className="border-t border-gray-100">
                         <td className="py-3">
-                          <div className="font-medium">
-                            {user.firstName} {user.lastName}
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-rose-100 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                              {user.profilePicture ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img
+                                  src={`${process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5050"}${user.profilePicture}`}
+                                  alt={user.firstName}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <span className="text-xs font-semibold text-rose-900">
+                                  {user.firstName?.[0]}
+                                </span>
+                              )}
+                            </div>
+                            <div>
+                              <div className="font-medium">
+                                {user.firstName} {user.lastName}
+                              </div>
+                              <div className="text-xs text-gray-500">@{user.username}</div>
+                            </div>
                           </div>
-                          <div className="text-xs text-gray-500">@{user.username}</div>
                         </td>
                         <td className="py-3">{user.email}</td>
                         <td className="py-3 capitalize">{user.role}</td>
@@ -284,14 +347,14 @@ export default function AdminDashboardPage() {
                             <button
                               type="button"
                               onClick={() => handleEdit(user)}
-                              className="text-rose-900 hover:underline"
+                              className="text-rose-900 hover:underline text-xs"
                             >
                               Edit
                             </button>
                             <button
                               type="button"
                               onClick={() => handleDelete(user._id)}
-                              className="text-red-600 hover:underline"
+                              className="text-red-600 hover:underline text-xs"
                             >
                               Delete
                             </button>

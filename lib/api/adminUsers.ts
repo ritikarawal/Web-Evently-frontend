@@ -1,5 +1,6 @@
 import axios from "./axios";
 import { API } from "./endpoints";
+import * as Axios from "axios";
 
 export interface AdminUserPayload {
   firstName?: string;
@@ -14,8 +15,17 @@ export interface AdminUserPayload {
 }
 
 export const getAllUsers = async () => {
-  const response = await axios.get(API.ADMIN.USERS);
-  return response.data;
+  try {
+    const response = await axios.get(API.ADMIN.USERS);
+    console.log('getAllUsers API response:', response);
+    return response.data;
+  } catch (error) {
+    console.error('getAllUsers API error:', error);
+    if (Axios.isAxiosError(error) && error.response?.data) {
+      console.error('Error data:', error.response.data);
+    }
+    throw error;
+  }
 };
 
 export const getUserById = async (id: string) => {
@@ -36,11 +46,7 @@ export const createUser = async (payload: AdminUserPayload) => {
   if (payload.phoneNumber) formData.append("phoneNumber", payload.phoneNumber);
   if (payload.image) formData.append("image", payload.image);
 
-  const response = await axios.post(API.ADMIN.USERS, formData, {
-    headers: {
-      "Content-Type": "multipart/form-data",
-    },
-  });
+  const response = await axios.post(API.ADMIN.USERS, formData);
   return response.data;
 };
 
@@ -57,11 +63,7 @@ export const updateUser = async (id: string, payload: AdminUserPayload) => {
   if (payload.phoneNumber) formData.append("phoneNumber", payload.phoneNumber);
   if (payload.image) formData.append("image", payload.image);
 
-  const response = await axios.put(API.ADMIN.USER(id), formData, {
-    headers: {
-      "Content-Type": "multipart/form-data",
-    },
-  });
+  const response = await axios.put(API.ADMIN.USER(id), formData);
   return response.data;
 };
 
