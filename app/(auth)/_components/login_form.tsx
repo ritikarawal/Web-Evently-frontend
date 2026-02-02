@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 import { LoginFormData, loginSchema } from "@/app/(auth)/authSchema";
 import { useState } from "react";
 import { login } from "@/lib/api/auth";
-import { setAuthToken, setUserData } from "@/lib/cookie";
+import { setAuthTokenClient, setUserDataClient } from "@/lib/client-cookie";
 
 export default function LoginForm() {
   const router = useRouter();
@@ -28,16 +28,27 @@ export default function LoginForm() {
     try{
       
       const result= await login(data)    
-      await setAuthToken( result.token );
-      await setUserData( result.data );
+      setAuthTokenClient(result.token);
+      setUserDataClient(result.data);
        if (result.success) {
-                router.push("/home");
+                const role = result?.data?.role;
+                if (role === "admin") {
+                  router.push("/admin/dashboard");
+                } else {
+                  router.push("/home");
+                }
             } else {
                 throw new Error(result.message || "Registration failed");
             }
       
-    }catch(err: Error | any){
-      setError(err.message || "Login failed");
+    }catch(err: unknown){
+      if (err instanceof Error) {
+        setError(err.message || "Login failed");
+      } else if (typeof err === "string") {
+        setError(err || "Login failed");
+      } else {
+        setError("Login failed");
+      }
     }
   };
 

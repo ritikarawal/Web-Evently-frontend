@@ -7,19 +7,21 @@ export default function RegisterPage() {
     <main className="min-h-screen bg-pink-50 text-black">
       
       <header className="flex justify-between items-center px-12 py-8">
-        <Image
-          src="/evently logo.png"
-          alt="Evently logo"
-          width={64}
-          height={64}
-          className="object-contain"
-        />
+        <Link href="/">
+          <Image
+            src="/evently logo.png"
+            alt="Evently logo"
+            width={64}
+            height={64}
+            className="object-contain"
+          />
+        </Link>
 
         <nav className="flex gap-12 text-sm text-black">
           <Link href="/">Home</Link>
-          <Link href="/">Features</Link>
-          <Link href="/">Pricing</Link>
-          <Link href="/">About Us</Link>
+          <Link href="/features">Features</Link>
+          <Link href="/pricing">Pricing</Link>
+          <Link href="/about">About Us</Link>
         </nav>
 
         <div className="flex gap-4 items-center">

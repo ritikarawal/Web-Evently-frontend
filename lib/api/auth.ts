@@ -4,39 +4,101 @@
 import axios from "./axios";
 import { API } from "./endpoints";
 
-export const register = async ( registerData : any ) => {
+interface RegisterData {
+    username: string;
+    email: string;
+    password: string;
+    // Add other fields as required by your backend
+}
+
+export const register = async (registerData: RegisterData) => {
     try{
         const response = await axios.post(
             API.AUTH.REGISTER, //path
             registerData //body data
         );
         return response.data; // what controller from backend sends
-    } catch (err: Error | any) {
-        throw new Error(
-            // 400-500 err code counts as exception
-            err.response?.data?.message // log error message from backend
-             || err.message // default error message
-             || "Registration failed" //fallback message if default fails
-        );
+    } catch (err: Error | unknown) {
+        let message = "Registration failed";
+        interface AxiosErrorShape {
+            response?: {
+                data?: {
+                    message?: string;
+                };
+            };
+            message?: string;
+        }
+        if (err && typeof err === "object") {
+            const errorObj = err as AxiosErrorShape;
+            if ("response" in err && typeof errorObj.response?.data?.message === "string") {
+                message = errorObj.response!.data!.message!;
+            } else if ("message" in err && typeof errorObj.message === "string") {
+                message = errorObj.message!;
+            }
+        }
+        throw new Error(message);
     };
     
 
 }
-export const login = async ( loginData : any ) => {
+interface LoginData {
+    email: string;
+    password: string;
+    // Add other fields as required by your backend
+}
+
+export const login = async (loginData: LoginData) => {
     try{
         const response = await axios.post(
             API.AUTH.LOGIN, //path
             loginData //body data
         );
         return response.data; // what controller from backend sends
-    } catch (err: Error | any) {
-        throw new Error(
-            // 400-500 err code counts as exception
-            err.response?.data?.message // log error message from backend
-             || err.message // default error message
-             || "Login failed" //fallback message if default fails
-        );
+    } catch (err: Error | unknown) {
+        let message = "Login failed";
+        interface AxiosErrorShape {
+            response?: {
+                data?: {
+                    message?: string;
+                };
+            };
+            message?: string;
+        }
+        if (err && typeof err === "object") {
+            const errorObj = err as AxiosErrorShape;
+            if ("response" in err && typeof errorObj.response?.data?.message === "string") {
+                message = errorObj.response!.data!.message!;
+            } else if ("message" in err && typeof errorObj.message === "string") {
+                message = errorObj.message!;
+            }
+        }
+        throw new Error(message);
     };
     
+}
 
+export const getProfile = async () => {
+    try {
+        const response = await axios.get(API.AUTH.PROFILE);
+        return response.data;
+    } catch (err: Error | unknown) {
+        let message = "Failed to fetch profile";
+        interface AxiosErrorShape {
+            response?: {
+                data?: {
+                    message?: string;
+                };
+            };
+            message?: string;
+        }
+        if (err && typeof err === "object") {
+            const errorObj = err as AxiosErrorShape;
+            if ("response" in err && typeof errorObj.response?.data?.message === "string") {
+                message = errorObj.response!.data!.message!;
+            } else if ("message" in err && typeof errorObj.message === "string") {
+                message = errorObj.message!;
+            }
+        }
+        throw new Error(message);
+    }
 }
