@@ -1,14 +1,13 @@
 "use client";
 
 import { useForm } from "react-hook-form";
-import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { LoginFormData, loginSchema } from "@/app/(auth)/authSchema";
 import { useState } from "react";
 import { login } from "@/lib/api/auth";
-import { setAuthToken, setUserData } from "@/lib/cookie";
+import { setAuthTokenClient, setUserDataClient } from "@/lib/client-cookie";
 
 export default function LoginForm() {
   const router = useRouter();
@@ -27,17 +26,28 @@ export default function LoginForm() {
     setError("");
     try{
       
-      const result= await login(data)    
-      await setAuthToken( result.token );
-      await setUserData( result.data );
+      const result= await login(data)
        if (result.success) {
-                router.push("/home");
+                setAuthTokenClient(result.token);
+                setUserDataClient(result.data);
+                const role = result?.data?.role;
+                if (role === "admin") {
+                  router.push("/admin/dashboard");
+                } else {
+                  router.push("/home");
+                }
             } else {
                 throw new Error(result.message || "Registration failed");
             }
       
-    }catch(err: Error | any){
-      setError(err.message || "Login failed");
+    }catch(err: unknown){
+      if (err instanceof Error) {
+        setError(err.message || "Login failed");
+      } else if (typeof err === "string") {
+        setError(err || "Login failed");
+      } else {
+        setError("Login failed");
+      }
     }
   };
 
@@ -46,6 +56,12 @@ export default function LoginForm() {
       <h2 className="text-2xl font-semibold text-center mb-6 text-gray-900">
         Welcome back
       </h2>
+
+      {error && (
+        <div className="mb-4 rounded-lg bg-red-100 border border-red-400 text-red-700 p-3 text-sm">
+          {error}
+        </div>
+      )}
 
       <form onSubmit={handleSubmit(onSubmit)}>
         <div className="space-y-5">
