@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getProfile, logout, updateProfilePicture } from "@/lib/api/auth";
+import { getProfile, logout, updateProfile, updateProfilePicture } from "@/lib/api/auth";
 
 interface ProfileData {
   _id?: string;
@@ -27,6 +27,19 @@ export default function ProfilePage() {
   const [imagePreview, setImagePreview] = useState<string>("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [showUploadForm, setShowUploadForm] = useState<boolean>(false);
+  const [editError, setEditError] = useState<string>("");
+  const [editSuccess, setEditSuccess] = useState<string>("");
+  const [saving, setSaving] = useState<boolean>(false);
+
+  const [formData, setFormData] = useState({
+    firstName: "",
+    lastName: "",
+    username: "",
+    email: "",
+    phoneNumber: "",
+    password: "",
+    confirmPassword: "",
+  });
 
   const handleLogout = () => {
     logout();
@@ -84,6 +97,14 @@ export default function ProfilePage() {
         const response = await getProfile();
         if (isMounted) {
           setProfile(response.data);
+          setFormData((prev) => ({
+            ...prev,
+            firstName: response.data?.firstName || "",
+            lastName: response.data?.lastName || "",
+            username: response.data?.username || "",
+            email: response.data?.email || "",
+            phoneNumber: response.data?.phoneNumber || "",
+          }));
         }
       } catch (err) {
         if (isMounted) {
@@ -101,6 +122,50 @@ export default function ProfilePage() {
       isMounted = false;
     };
   }, []);
+
+  const handleEditChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleSaveProfile = async () => {
+    setEditError("");
+    setEditSuccess("");
+
+    if (formData.password && formData.password !== formData.confirmPassword) {
+      setEditError("Passwords do not match");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const payload: Record<string, string> = {};
+
+      if (formData.firstName !== (profile?.firstName || "")) payload.firstName = formData.firstName;
+      if (formData.lastName !== (profile?.lastName || "")) payload.lastName = formData.lastName;
+      if (formData.username !== (profile?.username || "")) payload.username = formData.username;
+      if (formData.email !== (profile?.email || "")) payload.email = formData.email;
+      if (formData.phoneNumber !== (profile?.phoneNumber || "")) payload.phoneNumber = formData.phoneNumber;
+      if (formData.password) payload.password = formData.password;
+
+      const response = await updateProfile(payload);
+      setProfile(response.data);
+      setFormData((prev) => ({
+        ...prev,
+        password: "",
+        confirmPassword: "",
+      }));
+      setEditSuccess("Profile updated successfully");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to update profile";
+      setEditError(message);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <main className="min-h-screen bg-pink-50 text-black">
@@ -163,6 +228,100 @@ export default function ProfilePage() {
                   <p><span className="font-semibold">Role:</span> {profile.role}</p>
                   <p><span className="font-semibold">Phone:</span> {profile.phoneNumber || "N/A"}</p>
                   <p><span className="font-semibold">Joined:</span> {profile.createdAt ? new Date(profile.createdAt).toLocaleDateString() : "N/A"}</p>
+                </div>
+              </div>
+
+              <div className="border-t pt-6">
+                <h2 className="text-xl font-semibold text-gray-900 mb-4">Edit Profile</h2>
+                {editError && (
+                  <p className="mb-3 text-red-600 text-sm">{editError}</p>
+                )}
+                {editSuccess && (
+                  <p className="mb-3 text-green-700 text-sm">{editSuccess}</p>
+                )}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-2">First name</label>
+                    <input
+                      name="firstName"
+                      value={formData.firstName}
+                      onChange={handleEditChange}
+                      className="w-full px-3 py-2 rounded-lg bg-gray-100 border-0 focus:outline-none focus:ring-2 focus:ring-rose-900"
+                      placeholder="First name"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-2">Last name</label>
+                    <input
+                      name="lastName"
+                      value={formData.lastName}
+                      onChange={handleEditChange}
+                      className="w-full px-3 py-2 rounded-lg bg-gray-100 border-0 focus:outline-none focus:ring-2 focus:ring-rose-900"
+                      placeholder="Last name"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-2">Username</label>
+                    <input
+                      name="username"
+                      value={formData.username}
+                      onChange={handleEditChange}
+                      className="w-full px-3 py-2 rounded-lg bg-gray-100 border-0 focus:outline-none focus:ring-2 focus:ring-rose-900"
+                      placeholder="Username"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-2">Email</label>
+                    <input
+                      name="email"
+                      type="email"
+                      value={formData.email}
+                      onChange={handleEditChange}
+                      className="w-full px-3 py-2 rounded-lg bg-gray-100 border-0 focus:outline-none focus:ring-2 focus:ring-rose-900"
+                      placeholder="Email"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-2">Phone</label>
+                    <input
+                      name="phoneNumber"
+                      value={formData.phoneNumber}
+                      onChange={handleEditChange}
+                      className="w-full px-3 py-2 rounded-lg bg-gray-100 border-0 focus:outline-none focus:ring-2 focus:ring-rose-900"
+                      placeholder="Phone number"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-2">New password</label>
+                    <input
+                      name="password"
+                      type="password"
+                      value={formData.password}
+                      onChange={handleEditChange}
+                      className="w-full px-3 py-2 rounded-lg bg-gray-100 border-0 focus:outline-none focus:ring-2 focus:ring-rose-900"
+                      placeholder="New password"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-2">Confirm password</label>
+                    <input
+                      name="confirmPassword"
+                      type="password"
+                      value={formData.confirmPassword}
+                      onChange={handleEditChange}
+                      className="w-full px-3 py-2 rounded-lg bg-gray-100 border-0 focus:outline-none focus:ring-2 focus:ring-rose-900"
+                      placeholder="Confirm password"
+                    />
+                  </div>
+                </div>
+                <div className="mt-5">
+                  <button
+                    onClick={handleSaveProfile}
+                    disabled={saving}
+                    className="px-5 py-2 rounded-full bg-rose-900 text-white text-sm font-semibold hover:bg-rose-800 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {saving ? "Saving..." : "Save changes"}
+                  </button>
                 </div>
               </div>
 

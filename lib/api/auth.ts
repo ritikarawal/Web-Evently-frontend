@@ -143,3 +143,38 @@ export const updateProfilePicture = async (file: File) => {
         throw new Error(message);
     }
 }
+
+export interface UpdateProfileData {
+    firstName?: string;
+    lastName?: string;
+    username?: string;
+    email?: string;
+    phoneNumber?: string;
+    password?: string;
+}
+
+export const updateProfile = async (data: UpdateProfileData) => {
+    try {
+        const response = await axios.put(API.AUTH.PROFILE, data);
+        return response.data;
+    } catch (err: Error | unknown) {
+        let message = "Failed to update profile";
+        interface AxiosErrorShape {
+            response?: {
+                data?: {
+                    message?: string;
+                };
+            };
+            message?: string;
+        }
+        if (err && typeof err === "object") {
+            const errorObj = err as AxiosErrorShape;
+            if ("response" in err && typeof errorObj.response?.data?.message === "string") {
+                message = errorObj.response!.data!.message!;
+            } else if ("message" in err && typeof errorObj.message === "string") {
+                message = errorObj.message!;
+            }
+        }
+        throw new Error(message);
+    }
+}
