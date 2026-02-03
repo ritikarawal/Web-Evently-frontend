@@ -3,10 +3,66 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { logout } from "@/lib/api/auth";
+import { useState, useEffect } from "react";
+import { getProfile, logout } from "@/lib/api/auth";
 
 export default function HomePage() {
   const router = useRouter();
+  const [profilePicture, setProfilePicture] = useState<string | null>(null);
+
+  const getCookieValue = (name: string) => {
+    if (typeof document === "undefined") return null;
+    const nameEQ = `${name}=`;
+    const cookies = document.cookie.split(";");
+    for (const rawCookie of cookies) {
+      const cookie = rawCookie.trim();
+      if (cookie.startsWith(nameEQ)) {
+        const value = cookie.substring(nameEQ.length);
+        try {
+          return decodeURIComponent(value);
+        } catch {
+          return value;
+        }
+      }
+    }
+    return null;
+  };
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchProfilePicture = async () => {
+      try {
+        const baseUrl =
+          process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5050";
+
+        const userDataRaw = getCookieValue("user_data");
+        if (userDataRaw) {
+          try {
+            const parsed = JSON.parse(userDataRaw) as { profilePicture?: string };
+            if (parsed?.profilePicture && isMounted) {
+              setProfilePicture(`${baseUrl}${parsed.profilePicture}`);
+            }
+          } catch {
+            // ignore invalid cookie payload
+          }
+        }
+
+        const response = await getProfile();
+        const profilePic = response?.data?.profilePicture;
+        const resolvedUrl = profilePic ? `${baseUrl}${profilePic}` : null;
+        if (isMounted) {
+          setProfilePicture(resolvedUrl);
+        }
+      } catch (error) {
+        console.error("Error fetching profile picture:", error);
+      }
+    };
+
+    fetchProfilePicture();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleLogout = () => {
     logout();
@@ -100,25 +156,25 @@ export default function HomePage() {
           </div>
 
           {/* Profile Button */}
-          <div className="flex items-center gap-4">
-            <button 
-              onClick={() => router.push('/profile')}
-              className="flex items-center gap-2 px-4 py-2 bg-white/90 hover:bg-white rounded-full shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105"
-            >
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-rose-400 to-pink-500 flex items-center justify-center text-white font-semibold">
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-                </svg>
-              </div>
-              <span className="font-medium text-gray-800">Profile</span>
-            </button>
-            <button
-              onClick={handleLogout}
-              className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-full shadow-md hover:shadow-lg transition-all duration-300"
-            >
-              Logout
-            </button>
-          </div>
+          <button 
+            onClick={() => router.push('/profile')}
+            className="w-10 h-10 rounded-full bg-gradient-to-br from-rose-400 to-pink-500 flex items-center justify-center text-white shadow-md hover:shadow-lg transition-all duration-300 hover:scale-110 overflow-hidden"
+          >
+            {profilePicture ? (
+              <Image
+                src={profilePicture}
+                alt="Profile"
+                width={40}
+                height={40}
+                unoptimized
+                className="w-full h-full object-cover" 
+              />
+            ) : (
+              <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+              </svg>
+            )}
+          </button>
         </div>
 
         {/* Navigation Tabs */}
