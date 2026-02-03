@@ -44,6 +44,7 @@ export default function AdminDashboardPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [imagePreview, setImagePreview] = useState<string>("");
+  const [showModal, setShowModal] = useState(false);
 
   const buttonLabel = useMemo(
     () => (editingId ? "Update User" : "Create User"),
@@ -99,6 +100,7 @@ export default function AdminDashboardPage() {
     setEditingId(null);
     setFormData(initialFormState);
     setImagePreview("");
+    setShowModal(false);
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -136,9 +138,12 @@ export default function AdminDashboardPage() {
       role: user.role || "user",
       phoneNumber: user.phoneNumber || "",
     });
+    setShowModal(true);
   };
 
   const handleDelete = async (userId: string) => {
+    if (!confirm("Are you sure you want to delete this user?")) return;
+    
     setError("");
     try {
       await deleteUser(userId);
@@ -150,6 +155,11 @@ export default function AdminDashboardPage() {
         setError("Failed to delete user");
       }
     }
+  };
+
+  const openCreateModal = () => {
+    resetForm();
+    setShowModal(true);
   };
 
   return (
@@ -172,56 +182,163 @@ export default function AdminDashboardPage() {
         </div>
       </header>
 
-      <section className="grid grid-cols-1 lg:grid-cols-3 gap-8 px-8 py-8">
-        <div className="lg:col-span-1">
-          <div className="bg-white rounded-2xl shadow p-6">
-            <h2 className="text-lg font-semibold mb-4">{buttonLabel}</h2>
-            {error && (
-              <div className="mb-4 rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700">
-                {error}
-              </div>
-            )}
-            <form className="space-y-4" onSubmit={handleSubmit}>
+      <section className="px-8 py-8">
+        <div className="bg-white rounded-2xl shadow p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-lg font-semibold">Users</h2>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={loadUsers}
+                className="px-4 py-2 text-sm text-rose-900 hover:underline"
+              >
+                Refresh
+              </button>
+              <button
+                type="button"
+                onClick={openCreateModal}
+                className="px-6 py-2 bg-rose-900 text-white rounded-lg text-sm font-semibold hover:bg-rose-800 transition-colors"
+              >
+                + Create User
+              </button>
+            </div>
+          </div>
+
+          {error && (
+            <div className="mb-4 rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700">
+              {error}
+            </div>
+          )}
+
+          {loading ? (
+            <p className="text-sm text-gray-600">Loading users...</p>
+          ) : users.length === 0 ? (
+            <p className="text-sm text-gray-600">No users found.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="text-left text-gray-500">
+                  <tr>
+                    <th className="pb-2">Name</th>
+                    <th className="pb-2">Email</th>
+                    <th className="pb-2">Role</th>
+                    <th className="pb-2">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {users.map((user) => (
+                    <tr key={user._id} className="border-t border-gray-100">
+                      <td className="py-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-rose-100 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                            {user.profilePicture ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={`${process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5050"}${user.profilePicture}`}
+                                alt={user.firstName}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <span className="text-xs font-semibold text-rose-900">
+                                {user.firstName?.[0]}
+                              </span>
+                            )}
+                          </div>
+                          <div>
+                            <div className="font-medium">
+                              {user.firstName} {user.lastName}
+                            </div>
+                            <div className="text-xs text-gray-500">@{user.username}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-3">{user.email}</td>
+                      <td className="py-3 capitalize">{user.role}</td>
+                      <td className="py-3">
+                        <div className="flex gap-3">
+                          <button
+                            type="button"
+                            onClick={() => handleEdit(user)}
+                            className="text-rose-900 hover:underline text-xs"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(user._id)}
+                            className="text-red-600 hover:underline text-xs"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Modal */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+              <h2 className="text-lg font-semibold">{buttonLabel}</h2>
+              <button
+                type="button"
+                onClick={resetForm}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <form className="p-6 space-y-4" onSubmit={handleSubmit}>
               <div className="grid grid-cols-1 gap-3">
                 <input
                   type="text"
                   placeholder="First name"
                   value={formData.firstName || ""}
                   onChange={(e) => handleChange("firstName", e.target.value)}
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"
                 />
                 <input
                   type="text"
                   placeholder="Last name"
                   value={formData.lastName || ""}
                   onChange={(e) => handleChange("lastName", e.target.value)}
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"
                 />
                 <input
                   type="text"
                   placeholder="Username"
                   value={formData.username || ""}
                   onChange={(e) => handleChange("username", e.target.value)}
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"
                 />
                 <input
                   type="email"
                   placeholder="Email"
                   value={formData.email || ""}
                   onChange={(e) => handleChange("email", e.target.value)}
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"
                 />
                 <input
                   type="tel"
                   placeholder="Phone number"
                   value={formData.phoneNumber || ""}
                   onChange={(e) => handleChange("phoneNumber", e.target.value)}
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"
                 />
                 <select
                   value={formData.role || "user"}
                   onChange={(e) => handleChange("role", e.target.value)}
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"
                 >
                   <option value="user">User</option>
                   <option value="admin">Admin</option>
@@ -231,39 +348,54 @@ export default function AdminDashboardPage() {
                   placeholder="Password"
                   value={formData.password || ""}
                   onChange={(e) => handleChange("password", e.target.value)}
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"
                 />
                 <input
                   type="password"
                   placeholder="Confirm password"
                   value={formData.confirmPassword || ""}
                   onChange={(e) => handleChange("confirmPassword", e.target.value)}
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"
                 />
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => handleFileChange(e.target.files?.[0] || null)}
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                />
-                {formData.image && (
-                  <div className="text-xs text-gray-600">
-                    Selected: {formData.image.name}
-                  </div>
-                )}
-                {imagePreview && (
-                  <div className="relative w-24 h-24 rounded-lg overflow-hidden border border-gray-200">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={imagePreview}
-                      alt="Preview"
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                )}
+                
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Profile Picture
+                  </label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => handleFileChange(e.target.files?.[0] || null)}
+                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                  />
+                  {formData.image && (
+                    <div className="text-xs text-gray-600">
+                      Selected: {formData.image.name}
+                    </div>
+                  )}
+                  {imagePreview && (
+                    <div className="flex justify-center">
+                      <div className="relative w-24 h-24 rounded-lg overflow-hidden border border-gray-200">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={imagePreview}
+                          alt="Preview"
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
 
-              <div className="flex gap-3">
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={resetForm}
+                  className="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
                 <button
                   type="submit"
                   disabled={submitting}
@@ -271,104 +403,11 @@ export default function AdminDashboardPage() {
                 >
                   {submitting ? "Saving..." : buttonLabel}
                 </button>
-                {editingId && (
-                  <button
-                    type="button"
-                    onClick={resetForm}
-                    className="rounded-lg border border-gray-300 px-4 py-2 text-sm"
-                  >
-                    Cancel
-                  </button>
-                )}
               </div>
             </form>
           </div>
         </div>
-
-        <div className="lg:col-span-2">
-          <div className="bg-white rounded-2xl shadow p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold">Users</h2>
-              <button
-                type="button"
-                onClick={loadUsers}
-                className="text-sm text-rose-900 hover:underline"
-              >
-                Refresh
-              </button>
-            </div>
-
-            {loading ? (
-              <p className="text-sm text-gray-600">Loading users...</p>
-            ) : users.length === 0 ? (
-              <p className="text-sm text-gray-600">No users found.</p>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="text-left text-gray-500">
-                    <tr>
-                      <th className="pb-2">Name</th>
-                      <th className="pb-2">Email</th>
-                      <th className="pb-2">Role</th>
-                      <th className="pb-2">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {users.map((user) => (
-                      <tr key={user._id} className="border-t border-gray-100">
-                        <td className="py-3">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-rose-100 flex items-center justify-center flex-shrink-0 overflow-hidden">
-                              {user.profilePicture ? (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img
-                                  src={`${process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5050"}${user.profilePicture}`}
-                                  alt={user.firstName}
-                                  className="w-full h-full object-cover"
-                                />
-                              ) : (
-                                <span className="text-xs font-semibold text-rose-900">
-                                  {user.firstName?.[0]}
-                                </span>
-                              )}
-                            </div>
-                            <div>
-                              <div className="font-medium">
-                                {user.firstName} {user.lastName}
-                              </div>
-                              <div className="text-xs text-gray-500">@{user.username}</div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="py-3">{user.email}</td>
-                        <td className="py-3 capitalize">{user.role}</td>
-                        <td className="py-3">
-                          <div className="flex gap-3">
-                            <button
-                              type="button"
-                              onClick={() => handleEdit(user)}
-                              className="text-rose-900 hover:underline text-xs"
-                            >
-                              Edit
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleDelete(user._id)}
-                              className="text-red-600 hover:underline text-xs"
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        </div>
-      </section>
+      )}
     </main>
   );
 }
