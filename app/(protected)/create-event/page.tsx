@@ -2,35 +2,91 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Search, Grid, ChevronLeft, ChevronRight, MapPin } from 'lucide-react';
+import { ChevronLeft, ChevronRight, MapPin, Calendar, Clock, Upload, Star, Users, Check } from 'lucide-react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { createEvent, updateEvent } from '@/lib/api/events';
+import NavigationBar from "@/components/NavigationBar";
 
 function CreateEventContent() {
   const searchParams = useSearchParams();
+  const [currentStep, setCurrentStep] = useState(1);
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [activeTab, setActiveTab] = useState('Events');
-  const [duration, setDuration] = useState('');
-  const [notes, setNotes] = useState('');
+  const [startTime, setStartTime] = useState('');
+  const [endTime, setEndTime] = useState('');
+  const [description, setDescription] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [editEventId, setEditEventId] = useState<string | null>(null);
+  const [eventTitle, setEventTitle] = useState('');
+  const [selectedVenue, setSelectedVenue] = useState('');
 
-  const tabs = ['Events', 'My Events', 'Notification', 'Settings'];
+  const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-  const venues = [
-    { name: 'Cool Haus', location: 'Chucchepati, opposite to KL tower' },
-    { name: 'En Space', location: 'Chundevi' }
+  const steps = [
+    { number: 1, title: 'Basic Info', description: 'Event details' },
+    { number: 2, title: 'Date & Time', description: 'When it happens' },
+    { number: 3, title: 'Venue', description: 'Where it happens' },
+    { number: 4, title: 'Review', description: 'Confirm details' }
   ];
 
-  const weekDays = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
+  // Venue recommendations based on event category
+  const venuesByCategory: Record<string, Array<{
+    name: string;
+    location: string;
+    rating: number;
+    price: string;
+    capacity: string;
+  }>> = {
+    Birthday: [
+      { name: 'Party Palace Kathmandu', location: 'Thamel', rating: 4.8, price: '$$', capacity: '50-100' },
+      { name: 'Celebration Hall', location: 'Lazimpat', rating: 4.6, price: '$$$', capacity: '100-150' },
+      { name: 'Fun Zone Events', location: 'Durbarmarg', rating: 4.5, price: '$$', capacity: '30-80' }
+    ],
+    Wedding: [
+      { name: 'Royal Banquet Hall', location: 'Lazimpat', rating: 4.9, price: '$$$$', capacity: '300-500' },
+      { name: 'Garden Palace', location: 'Thamel', rating: 4.8, price: '$$$$', capacity: '200-400' },
+      { name: 'Grand Celebration Center', location: 'Naxal', rating: 4.7, price: '$$$', capacity: '250-350' }
+    ],
+    Conference: [
+      { name: 'Business Hub Kathmandu', location: 'Durbar Marg', rating: 4.7, price: '$$$', capacity: '100-200' },
+      { name: 'Tech Convention Center', location: 'Pulchowk', rating: 4.6, price: '$$', capacity: '150-250' },
+      { name: 'Executive Meeting Space', location: 'Baluwatar', rating: 4.8, price: '$$$$', capacity: '50-100' }
+    ],
+    Concert: [
+      { name: 'Live Music Arena', location: 'Bouddha', rating: 4.7, price: '$$$', capacity: '500-1000' },
+      { name: 'Rock Valley', location: 'Jhamsikhel', rating: 4.5, price: '$$', capacity: '200-400' },
+      { name: 'Open Air Amphitheater', location: 'Patan', rating: 4.8, price: '$$$$', capacity: '1000+' }
+    ],
+    Exhibition: [
+      { name: 'Art Gallery Nepal', location: 'Babar Mahal', rating: 4.6, price: '$$', capacity: '100-150' },
+      { name: 'Expo Center Kathmandu', location: 'Bhrikutimandap', rating: 4.5, price: '$$$', capacity: '500-1000' },
+      { name: 'Modern Display Hall', location: 'Tripureshwor', rating: 4.4, price: '$$', capacity: '200-300' }
+    ],
+    Sports: [
+      { name: 'Stadium Complex', location: 'Dasharath Rangashala', rating: 4.7, price: '$$$$', capacity: '5000+' },
+      { name: 'Sports Arena', location: 'Satdobato', rating: 4.5, price: '$$', capacity: '500-1000' },
+      { name: 'Athletic Center', location: 'Lagankhel', rating: 4.6, price: '$$$', capacity: '200-500' }
+    ],
+    Workshop: [
+      { name: 'Learning Hub', location: 'Putalisadak', rating: 4.6, price: '$$', capacity: '30-50' },
+      { name: 'Creative Space', location: 'Jhamsikhel', rating: 4.7, price: '$$', capacity: '20-40' },
+      { name: 'Innovation Lab', location: 'Kupondole', rating: 4.8, price: '$$$', capacity: '40-60' }
+    ],
+    Seminar: [
+      { name: 'Academic Hall', location: 'Kirtipur', rating: 4.5, price: '$', capacity: '100-200' },
+      { name: 'Professional Center', location: 'New Baneshwor', rating: 4.7, price: '$$', capacity: '80-150' },
+      { name: 'Conference Suite', location: 'Hattisar', rating: 4.6, price: '$$$', capacity: '50-100' }
+    ]
+  };
 
-  // Get category from URL params and capitalize it
+  const getRecommendedVenues = () => {
+    return venuesByCategory[selectedCategory] || [];
+  };
+
   useEffect(() => {
     const categoryParam = searchParams.get('category');
     if (categoryParam) {
@@ -39,7 +95,6 @@ function CreateEventContent() {
     }
   }, [searchParams]);
 
-  // Check for edit event in localStorage
   useEffect(() => {
     const editEventData = localStorage.getItem('editEvent');
     if (editEventData) {
@@ -48,10 +103,11 @@ function CreateEventContent() {
         setIsEditing(true);
         setEditEventId(event._id);
         setSelectedCategory(event.category.charAt(0).toUpperCase() + event.category.slice(1));
+        setEventTitle(event.title || '');
         setStartDate(new Date(event.startDate));
         setEndDate(new Date(event.endDate));
-        setNotes(event.description);
-        // Clear the localStorage
+        setDescription(event.description);
+        setSelectedVenue(event.location || '');
         localStorage.removeItem('editEvent');
       } catch (error) {
         console.error('Error parsing edit event data:', error);
@@ -59,34 +115,21 @@ function CreateEventContent() {
     }
   }, []);
 
-  // Generate calendar days for the current month
   const generateCalendarDays = (date: Date) => {
     const year = date.getFullYear();
     const month = date.getMonth();
-
-    // Get first day of the month
     const firstDay = new Date(year, month, 1);
-    // Get last day of the month
     const lastDay = new Date(year, month + 1, 0);
-    // Get last day of previous month
-    const lastDayPrevMonth = new Date(year, month, 0);
-
     const daysInMonth = lastDay.getDate();
-    const startingDayOfWeek = firstDay.getDay(); // 0 = Sunday, 1 = Monday, etc.
-
-    // Adjust for Monday start (0 = Monday, 6 = Sunday)
-    const adjustedStartingDay = startingDayOfWeek === 0 ? 6 : startingDayOfWeek - 1;
+    const startingDayOfWeek = firstDay.getDay();
 
     const weeks: (number | null)[][] = [];
     let currentWeek: (number | null)[] = [];
 
-    // Add days from previous month
-    const prevMonthDays = adjustedStartingDay;
-    for (let i = prevMonthDays - 1; i >= 0; i--) {
+    for (let i = 0; i < startingDayOfWeek; i++) {
       currentWeek.push(null);
     }
 
-    // Add days of current month
     for (let day = 1; day <= daysInMonth; day++) {
       currentWeek.push(day);
       if (currentWeek.length === 7) {
@@ -95,8 +138,7 @@ function CreateEventContent() {
       }
     }
 
-    // Add days from next month to fill the last week
-    while (currentWeek.length < 7) {
+    while (currentWeek.length > 0 && currentWeek.length < 7) {
       currentWeek.push(null);
     }
     if (currentWeek.length > 0) {
@@ -106,7 +148,6 @@ function CreateEventContent() {
     return weeks;
   };
 
-  // Month navigation functions
   const goToPreviousMonth = () => {
     setCurrentMonth(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
   };
@@ -115,54 +156,29 @@ function CreateEventContent() {
     setCurrentMonth(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
   };
 
-  // Handle date selection for range
   const handleDateSelect = (day: number) => {
     const selectedDateTime = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
     
-    if (!startDate) {
+    if (!startDate || (startDate && endDate)) {
       setStartDate(selectedDateTime);
       setEndDate(null);
-    } else if (!endDate) {
+    } else {
       if (selectedDateTime < startDate) {
         setEndDate(startDate);
         setStartDate(selectedDateTime);
       } else {
         setEndDate(selectedDateTime);
       }
-    } else {
-      // Reset selection
-      setStartDate(selectedDateTime);
-      setEndDate(null);
     }
   };
 
-  // Check if a date is selected (in range)
-  const isDateSelected = (day: number) => {
+  const isDateInRange = (day: number) => {
     const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
     if (!startDate) return false;
-    if (startDate && !endDate) {
-      return date.getTime() === startDate.getTime();
-    }
-    if (startDate && endDate) {
-      return date >= startDate && date <= endDate;
-    }
-    return false;
+    if (!endDate) return date.getTime() === startDate.getTime();
+    return date >= startDate && date <= endDate;
   };
 
-  // Check if a date is the start or end of range
-  const isRangeStart = (day: number) => {
-    if (!startDate) return false;
-    const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
-    return date.getTime() === startDate.getTime();
-  };
-
-  const isRangeEnd = (day: number) => {
-    if (!endDate) return false;
-    const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
-    return date.getTime() === endDate.getTime();
-  };
-
-  // Check if a date is today
   const isToday = (day: number) => {
     const today = new Date();
     return today.getDate() === day &&
@@ -172,389 +188,476 @@ function CreateEventContent() {
 
   const calendarDays = generateCalendarDays(currentMonth);
 
+  const canProceedToNextStep = () => {
+    switch (currentStep) {
+      case 1:
+        return eventTitle.trim() !== '' && selectedCategory !== '';
+      case 2:
+        return startDate !== null;
+      case 3:
+        return selectedVenue.trim() !== '';
+      case 4:
+        return true;
+      default:
+        return false;
+    }
+  };
+
+  const handleNext = () => {
+    if (canProceedToNextStep() && currentStep < 4) {
+      setCurrentStep(currentStep + 1);
+    }
+  };
+
+  const handleBack = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1);
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!startDate || !eventTitle || !selectedCategory) return;
+
+    setLoading(true);
+    setMessage('');
+
+    try {
+      const eventData = {
+        title: eventTitle,
+        description: description || `A ${selectedCategory} event`,
+        startDate: startDate.toISOString(),
+        endDate: endDate ? endDate.toISOString() : startDate.toISOString(),
+        location: selectedVenue || 'TBD',
+        category: selectedCategory.toLowerCase(),
+        isPublic: true,
+        duration: `${startTime} - ${endTime}`,
+        notes: description,
+      };
+
+      if (isEditing && editEventId) {
+        await updateEvent(editEventId, eventData);
+        setMessage('Event updated successfully!');
+      } else {
+        await createEvent(eventData);
+        setMessage('Event created successfully!');
+      }
+
+      setTimeout(() => {
+        window.location.href = '/home';
+      }, 1500);
+    } catch (error: any) {
+      setMessage(error.message || 'Failed to process event');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const recommendedVenues = getRecommendedVenues();
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#ffe4e1] via-[#fff5f5] to-[#f8e8e8]">
-      {/* Header */}
-      <header className="bg-gradient-to-r from-[#db8585] to-[#c76b6b] px-6 py-4 shadow-lg">
-        <div className="max-w-[1800px] mx-auto flex items-center justify-between">
-          {/* Logo */}
-          <div className="flex items-center">
-            <div className="bg-white/20 backdrop-blur-sm rounded-2xl p-2">
-              <Image
-                src="/evently logo.png"
-                alt="Evently Logo"
-                width={70}
-                height={70}
-                className="object-contain"
-              />
-            </div>
-          </div>
+    <div className="min-h-screen bg-gray-50">
+      <NavigationBar profilePicture={null} />
 
-          {/* Search and Category */}
-          <div className="flex items-center gap-4">
-            <button className="bg-white/90 backdrop-blur-sm rounded-2xl px-6 py-4 flex items-center gap-2 hover:bg-white hover:scale-105 transition-all duration-300 shadow-lg">
-              <Grid className="w-5 h-5 text-[#49516f]" />
-              <span className="text-[#49516f] font-['Poppins'] font-medium">
-                {selectedCategory || 'Category'}
-              </span>
+      <main className="max-w-4xl mx-auto px-6 py-12">
+        {/* Header */}
+        <div className="flex items-center gap-4 mb-8">
+          <Link href="/home">
+            <button className="w-12 h-12 rounded-xl bg-white hover:bg-gray-100 flex items-center justify-center shadow-sm transition-all">
+              <ChevronLeft className="w-6 h-6 text-gray-600" />
             </button>
-
-            <div className="bg-white/90 backdrop-blur-sm rounded-2xl flex items-center overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300">
-              <input
-                type="text"
-                placeholder="Search events..."
-                className="px-6 py-4 w-[400px] outline-none text-[#49516f] font-['Poppins'] placeholder:text-[#49516f]/60"
-              />
-              <button className="bg-gradient-to-r from-[#800020] to-[#600018] p-4 hover:from-[#600018] hover:to-[#400010] transition-all duration-300">
-                <Search className="w-6 h-6 text-white" />
-              </button>
-            </div>
-          </div>
-
-          {/* User Icons */}
-          <div className="flex items-center gap-4">
-            <button className="hover:scale-110 transition-transform duration-300">
-              <div className="w-[70px] h-[70px] rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-lg hover:shadow-xl transition-shadow duration-300">
-                <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-                </svg>
-              </div>
-            </button>
-            <button className="hover:scale-110 transition-transform duration-300">
-              <div className="w-[70px] h-[70px] rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-lg hover:shadow-xl transition-shadow duration-300">
-                <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-                </svg>
-              </div>
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {/* Navigation Tabs */}
-      <nav className="bg-gradient-to-r from-[#ffe4e1] to-[#fff5f5] pt-8 pb-6 shadow-sm">
-        <div className="max-w-[1800px] mx-auto px-6">
-          <div className="flex items-center gap-8">
-            {tabs.map((tab) => (
-              <Link
-                key={tab}
-                href={tab === 'Events' ? '/home' : tab === 'My Events' ? '/my-events' : tab === 'Notification' ? '/notifications' : '/settings'}
-                className="relative pb-2 transition-all duration-300 group"
-              >
-                <span className={`font-['Poppins'] text-2xl transition-all duration-300 ${
-                  activeTab === tab 
-                    ? 'text-black font-normal scale-105' 
-                    : 'text-black/60 hover:text-black/80 group-hover:scale-105'
-                }`}>
-                  {tab}
-                </span>
-                {activeTab === tab && (
-                  <div className="absolute bottom-0 left-0 h-1 bg-gradient-to-r from-[#db8585] to-[#c76b6b] w-full rounded-full shadow-sm" />
-                )}
-                {activeTab !== tab && (
-                  <div className="absolute bottom-0 left-0 h-0.5 bg-transparent group-hover:bg-[#db8585]/50 w-full rounded-full transition-all duration-300" />
-                )}
-              </Link>
-            ))}
-          </div>
-        </div>
-      </nav>
-
-      {/* Main Content */}
-      <main className="max-w-[1800px] mx-auto px-6 py-6">
-        <div className="flex items-center gap-4 mb-6">
-          <Link href="/home" className="group">
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-3 hover:bg-white hover:scale-110 transition-all duration-300 shadow-lg hover:shadow-xl">
-              <svg className="w-6 h-6 text-[#992727] group-hover:text-[#db8585] transition-colors duration-300" fill="none" viewBox="0 0 23 22">
-                <path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </div>
           </Link>
-          <div className="space-y-2">
-            <h1 className="font-['Quicksand'] font-normal text-[36px] text-black bg-gradient-to-r from-[#db8585] to-[#c76b6b] bg-clip-text text-transparent">
-              {isEditing ? 'Edit Event' : 'Create New Event'}
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">
+              {isEditing ? 'Edit Event' : 'Create Event'}
             </h1>
             {selectedCategory && (
-              <p className="font-['Poppins'] text-[18px] text-[#49516f] flex items-center gap-2">
-                <span className="text-[#db8585] font-normal">✨</span>
-                Category: <span className="font-normal text-[#db8585] bg-[#db8585]/10 px-3 py-1 rounded-full">{selectedCategory}</span>
-              </p>
+              <p className="text-gray-600 mt-1">{selectedCategory}</p>
             )}
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-          {/* Event Image Section */}
-          <div className="space-y-6">
-            <div className="bg-white rounded-[20px] overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 border border-white/50">
-              <div className="w-full h-[200px] bg-gradient-to-br from-[#f8e8e8] to-[#ffe4e1] flex items-center justify-center relative group">
-                <div className="text-center space-y-3">
-                  <div className="w-12 h-12 bg-white/30 backdrop-blur-sm rounded-full flex items-center justify-center mx-auto shadow-md">
-                    <svg className="w-6 h-6 text-[#db8585]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
+        {/* Stepper */}
+        <div className="mb-12">
+          <div className="flex items-center justify-between">
+            {steps.map((step, index) => (
+              <div key={step.number} className="flex items-center flex-1">
+                <div className="flex flex-col items-center flex-1">
+                  <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${
+                    currentStep > step.number
+                      ? 'bg-green-500 text-white'
+                      : currentStep === step.number
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-200 text-gray-500'
+                  }`}>
+                    {currentStep > step.number ? (
+                      <Check className="w-6 h-6" />
+                    ) : (
+                      <span className="font-semibold">{step.number}</span>
+                    )}
                   </div>
-                  <span className="text-[#49516f] font-['Poppins'] font-normal text-sm">Upload Event Image</span>
-                  <button className="bg-gradient-to-r from-[#db8585] to-[#c76b6b] text-white px-4 py-2 rounded-full font-['Poppins'] text-sm font-normal hover:from-[#c76b6b] hover:to-[#a85a5a] transition-all duration-300 hover:scale-105 shadow-md">
-                    Choose File
-                  </button>
-                </div>
-                <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              </div>
-            </div>
-
-            {/* Recommendation Venues */}
-            <div className="bg-white rounded-[20px] p-4 shadow-lg hover:shadow-xl transition-shadow duration-300 border border-white/50">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="font-['Plus_Jakarta_Sans'] font-normal text-[16px] text-[#121417] bg-gradient-to-r from-[#db8585] to-[#c76b6b] bg-clip-text text-transparent">
-                  ✨ Recommended Venues
-                </h2>
-                <button className="font-['Plus_Jakarta_Sans'] font-normal text-[#661a1a] text-sm hover:text-[#db8585] transition-colors duration-300 hover:scale-110">
-                  More →
-                </button>
-              </div>
-
-              <div className="space-y-3">
-                {venues.map((venue, index) => (
-                  <div
-                    key={index}
-                    className="bg-gradient-to-r from-[#ffced8] to-[#ffb3c1] rounded-[15px] p-3 flex items-start gap-3 hover:from-[#ffb3c1] hover:to-[#ff9bb0] transition-all duration-300 hover:scale-[1.02] shadow-sm hover:shadow-md cursor-pointer group"
-                  >
-                    <input
-                      type="checkbox"
-                      className="mt-0.5 w-4 h-4 rounded border-2 border-black accent-[#db8585] hover:scale-110 transition-transform duration-200"
-                    />
-                    <div className="flex-1">
-                      <div className="font-['Plus_Jakarta_Sans'] font-normal text-[14px] text-black flex items-center gap-2 group-hover:text-[#661a1a] transition-colors duration-300">
-                        🏛️ {venue.name}
-                      </div>
-                      <div className="font-['Plus_Jakarta_Sans'] font-normal text-[12px] text-black/80 flex items-center gap-1 mt-1">
-                        <MapPin className="w-3 h-3 text-[#db8585]" />
-                        {venue.location}
-                      </div>
-                    </div>
+                  <div className="text-center mt-2">
+                    <p className={`text-sm font-medium ${
+                      currentStep >= step.number ? 'text-gray-900' : 'text-gray-500'
+                    }`}>
+                      {step.title}
+                    </p>
+                    <p className="text-xs text-gray-500">{step.description}</p>
                   </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Note */}
-            <div className="bg-gradient-to-r from-[#fff5f5] to-[#f8e8e8] rounded-[15px] p-4 shadow-md border border-[#db8585]/20">
-              <div className="flex items-start gap-2">
-                <span className="text-lg">💡</span>
-                <div>
-                  <h3 className="font-['Plus_Jakarta_Sans'] font-normal text-[14px] text-[#661a1a] mb-1">
-                    Important Note
-                  </h3>
-                  <p className="font-['Poppins'] text-[12px] text-[#49516f] leading-relaxed">
-                    Celebration includes a cake, candles, and basic decor elements. Additional customizations can be requested in the notes section.
-                  </p>
                 </div>
+                {index < steps.length - 1 && (
+                  <div className={`h-1 flex-1 mx-4 rounded transition-all ${
+                    currentStep > step.number ? 'bg-green-500' : 'bg-gray-200'
+                  }`} />
+                )}
               </div>
-            </div> 
+            ))}
           </div>
+        </div>
 
-          {/* Calendar Section */}
-          <div className="bg-white rounded-[15px] shadow-lg hover:shadow-xl transition-shadow duration-300 border border-white/50 p-4">
-            {/* Month Selector */}
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-['Inter'] font-normal text-xl text-[#333] bg-gradient-to-r from-[#db8585] to-[#c76b6b] bg-clip-text text-transparent">
-                📅 {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-              </h3>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={goToPreviousMonth}
-                  className="bg-gradient-to-r from-[#f8e8e8] to-[#ffe4e1] hover:from-[#ffe4e1] hover:to-[#f8e8e8] p-1.5 rounded-full transition-all duration-300 hover:scale-110 shadow-sm hover:shadow-md"
-                >
-                  <ChevronLeft className="w-4 h-4 text-[#db8585]" />
-                </button>
-                <button
-                  onClick={goToNextMonth}
-                  className="bg-gradient-to-r from-[#f8e8e8] to-[#ffe4e1] hover:from-[#ffe4e1] hover:to-[#f8e8e8] p-1.5 rounded-full transition-all duration-300 hover:scale-110 shadow-sm hover:shadow-md"
-                >
-                  <ChevronRight className="w-4 h-4 text-[#db8585]" />
-                </button>
-              </div>
-            </div>
-
-            {/* Calendar Grid */}
-            <div className="space-y-3">
-              {/* Weekday Headers */}
-              <div className="grid grid-cols-7 gap-1 text-center">
-                {weekDays.map((day) => (
-                  <div
-                    key={day}
-                    className="font-['Inter'] font-normal text-xs text-[#666] py-1"
-                  >
-                    {day}
-                  </div>
-                ))}
+        {/* Step Content */}
+        <div className="bg-white rounded-2xl shadow-lg p-8 mb-8 min-h-[500px]">
+          {/* Step 1: Basic Info */}
+          {currentStep === 1 && (
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">Basic Information</h2>
+                <p className="text-gray-600">Tell us about your event</p>
               </div>
 
-              {/* Calendar Days */}
-              {calendarDays.map((week, weekIndex) => (
-                <div key={weekIndex} className="grid grid-cols-7 gap-1 text-center">
-                  {week.map((day, dayIndex) => (
-                    <div key={dayIndex} className="flex items-center justify-center">
-                      {day ? (
-                        <button
-                          onClick={() => handleDateSelect(day)}
-                          className={`w-8 h-8 rounded-lg font-['Inter'] font-normal text-xs transition-all duration-300 hover:scale-110 shadow-sm hover:shadow-md relative ${
-                            isRangeStart(day)
-                              ? 'bg-gradient-to-r from-[#db8585] to-[#c76b6b] text-white shadow-md scale-105 rounded-l-lg'
-                              : isRangeEnd(day)
-                              ? 'bg-gradient-to-r from-[#db8585] to-[#c76b6b] text-white shadow-md scale-105 rounded-r-lg'
-                              : isDateSelected(day)
-                              ? 'bg-gradient-to-r from-[#db8585]/80 to-[#c76b6b]/80 text-white'
-                              : isToday(day)
-                              ? 'bg-gradient-to-r from-[#ffe4e1] to-[#f8e8e8] text-[#db8585] border border-[#db8585]'
-                              : 'text-[#666] hover:bg-gradient-to-r hover:from-[#ffe4e1] hover:to-[#f8e8e8] hover:text-[#db8585]'
-                          }`}
-                        >
-                          {day}
-                          {isToday(day) && !isDateSelected(day) && (
-                            <div className="absolute -bottom-0.5 left-1/2 transform -translate-x-1/2 w-0.5 h-0.5 bg-[#db8585] rounded-full"></div>
-                          )}
-                        </button>
-                      ) : (
-                        <div className="w-8 h-8"></div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Notes and Duration Section */}
-          <div className="space-y-6">
-            {/* Notes */}
-            <div className="bg-white rounded-[20px] p-6 shadow-lg hover:shadow-xl transition-shadow duration-300 border border-white/50 min-h-[280px]">
-              <h3 className="font-['Plus_Jakarta_Sans'] font-normal text-[18px] text-[#661a1a] mb-4 flex items-center gap-2">
-                <span className="text-xl">📝</span>
-                Any notes for us or want to customize something?
-              </h3>
-              <textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Write your special requests, dietary preferences, theme ideas, or any other details here..."
-                className="w-full h-[200px] outline-none font-['Poppins'] text-[16px] text-[#49516f] placeholder-[#49516f]/60 resize-none bg-gradient-to-br from-[#f8f9fa] to-[#e9ecef] rounded-xl p-4 border border-[#db8585]/20 focus:border-[#db8585] focus:ring-2 focus:ring-[#db8585]/20 transition-all duration-300"
-              />
-            </div>
-
-            {/* Duration */}
-            <div className="bg-gradient-to-r from-[#ff7474] to-[#e55a5a] rounded-[20px] p-6 shadow-lg hover:shadow-xl transition-shadow duration-300">
-              <div className="flex items-center gap-3">
-                <label className="font-['Plus_Jakarta_Sans'] font-normal text-xl text-white flex items-center gap-2">
-                  <span>⏰</span>
-                  Duration:
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Event Title *
                 </label>
                 <input
                   type="text"
-                  value={duration}
-                  onChange={(e) => setDuration(e.target.value)}
-                  placeholder="e.g., 2 hours, 3-5 PM"
-                  className="flex-1 bg-white/20 backdrop-blur-sm rounded-xl px-4 py-2 outline-none font-['Poppins'] text-[16px] text-white placeholder-white/70 border border-white/30 focus:border-white/50 focus:ring-2 focus:ring-white/20 transition-all duration-300"
+                  value={eventTitle}
+                  onChange={(e) => setEventTitle(e.target.value)}
+                  placeholder="Enter your event name"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-lg"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Category *
+                </label>
+                <input
+                  type="text"
+                  value={selectedCategory}
+                  readOnly
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-700"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Description
+                </label>
+                <textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Describe your event in detail..."
+                  rows={6}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all resize-none"
                 />
               </div>
             </div>
+          )}
 
-            {/* Send Approval Button */}
-            <form onSubmit={async (e) => {
-              e.preventDefault();
-              if (!startDate) return;
+          {/* Step 2: Date & Time */}
+          {currentStep === 2 && (
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">Date & Time</h2>
+                <p className="text-gray-600">When will your event take place?</p>
+              </div>
 
-              setLoading(true);
-              setMessage('');
+              {/* Time Selection */}
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <Clock className="w-4 h-4 inline mr-1" />
+                    Start Time
+                  </label>
+                  <input
+                    type="time"
+                    value={startTime}
+                    onChange={(e) => setStartTime(e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                  />
+                </div>
 
-              try {
-                const eventData = {
-                  title: `${selectedCategory} Event`,
-                  description: notes || `A ${selectedCategory} event`,
-                  startDate: startDate.toISOString(),
-                  endDate: endDate ? endDate.toISOString() : startDate.toISOString(),
-                  location: 'To be determined', // This could be enhanced to include venue selection
-                  category: selectedCategory.toLowerCase(),
-                  isPublic: true,
-                  duration,
-                  notes,
-                };
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    End Time
+                  </label>
+                  <input
+                    type="time"
+                    value={endTime}
+                    onChange={(e) => setEndTime(e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                  />
+                </div>
+              </div>
 
-                let response;
-                if (isEditing && editEventId) {
-                  response = await updateEvent(editEventId, eventData);
-                  setMessage('Event updated successfully!');
-                } else {
-                  response = await createEvent(eventData);
-                  setMessage('Event approval request sent successfully! Waiting for admin approval.');
-                }
-                console.log('Event processed:', response);
+              {/* Calendar */}
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <label className="block text-sm font-medium text-gray-700">
+                    <Calendar className="w-4 h-4 inline mr-1" />
+                    Select Date *
+                  </label>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={goToPreviousMonth}
+                      className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                    >
+                      <ChevronLeft className="w-5 h-5 text-gray-600" />
+                    </button>
+                    <span className="px-4 py-2 font-medium text-gray-700">
+                      {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={goToNextMonth}
+                      className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                    >
+                      <ChevronRight className="w-5 h-5 text-gray-600" />
+                    </button>
+                  </div>
+                </div>
 
-                // Reset form
-                setStartDate(null);
-                setEndDate(null);
-                setDuration('');
-                setNotes('');
-                setIsEditing(false);
-                setEditEventId(null);
-              } catch (error: any) {
-                setMessage(error.message || 'Failed to send approval request');
-                console.error('Error creating event:', error);
-              } finally {
-                setLoading(false);
-              }
-            }}>
-              <input type="hidden" name="category" value={selectedCategory} />
-              {startDate && (
-                <div className="mb-4 bg-gradient-to-r from-[#e8f4fd] to-[#d4edff] rounded-[15px] p-4 border border-[#4a90e2]/20">
-                  <div className="flex items-center gap-2">
-                    <span className="text-lg">📅</span>
-                    <div>
-                      <p className="font-['Plus_Jakarta_Sans'] font-normal text-[14px] text-[#2c5aa0]">
-                        Selected Date Range
-                      </p>
-                      <p className="font-['Poppins'] text-[12px] text-[#49516f]">
-                        {startDate.toLocaleDateString('en-US', {
-                          weekday: 'long',
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric'
-                        })}
-                        {endDate && (
-                          <> to {endDate.toLocaleDateString('en-US', {
-                            weekday: 'long',
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric'
-                          })}</>
-                        )}
-                      </p>
+                <div className="space-y-2">
+                  <div className="grid grid-cols-7 gap-2">
+                    {weekDays.map((day) => (
+                      <div key={day} className="text-center text-sm font-medium text-gray-500 py-2">
+                        {day}
+                      </div>
+                    ))}
+                  </div>
+
+                  {calendarDays.map((week, weekIndex) => (
+                    <div key={weekIndex} className="grid grid-cols-7 gap-2">
+                      {week.map((day, dayIndex) => (
+                        <div key={dayIndex}>
+                          {day ? (
+                            <button
+                              type="button"
+                              onClick={() => handleDateSelect(day)}
+                              className={`w-full aspect-square rounded-lg text-sm font-medium transition-all ${
+                                isDateInRange(day)
+                                  ? 'bg-blue-600 text-white hover:bg-blue-700'
+                                  : isToday(day)
+                                  ? 'bg-gray-100 text-gray-900 border-2 border-blue-500'
+                                  : 'text-gray-700 hover:bg-gray-100'
+                              }`}
+                            >
+                              {day}
+                            </button>
+                          ) : (
+                            <div className="w-full aspect-square" />
+                          )}
+                        </div>
+                      ))}
                     </div>
+                  ))}
+                </div>
+
+                {startDate && (
+                  <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                    <p className="text-sm font-medium text-blue-900">
+                      {startDate.toLocaleDateString('en-US', { 
+                        weekday: 'long', 
+                        month: 'long', 
+                        day: 'numeric', 
+                        year: 'numeric' 
+                      })}
+                      {endDate && ` - ${endDate.toLocaleDateString('en-US', { 
+                        weekday: 'long', 
+                        month: 'long', 
+                        day: 'numeric', 
+                        year: 'numeric' 
+                      })}`}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Step 3: Venue */}
+          {currentStep === 3 && (
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">Select Venue</h2>
+                <p className="text-gray-600">Choose a location for your event</p>
+              </div>
+
+              {recommendedVenues.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                    Recommended for {selectedCategory}
+                  </h3>
+                  <div className="space-y-3">
+                    {recommendedVenues.map((venue, index) => (
+                      <div
+                        key={index}
+                        onClick={() => setSelectedVenue(venue.name)}
+                        className={`border-2 rounded-xl p-4 cursor-pointer transition-all ${
+                          selectedVenue === venue.name
+                            ? 'border-blue-500 bg-blue-50'
+                            : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
+                        }`}
+                      >
+                        <div className="flex items-start gap-4">
+                          <input
+                            type="radio"
+                            checked={selectedVenue === venue.name}
+                            onChange={() => setSelectedVenue(venue.name)}
+                            className="mt-1 w-5 h-5 text-blue-600"
+                          />
+                          <div className="flex-1">
+                            <div className="flex items-start justify-between mb-2">
+                              <h4 className="font-semibold text-lg text-gray-900">{venue.name}</h4>
+                              <div className="flex items-center gap-1 bg-yellow-50 px-3 py-1 rounded-full">
+                                <Star className="w-4 h-4 text-yellow-500 fill-current" />
+                                <span className="text-sm font-medium text-gray-700">{venue.rating}</span>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 text-gray-600 mb-2">
+                              <MapPin className="w-4 h-4" />
+                              <span>{venue.location}</span>
+                            </div>
+                            <div className="flex items-center gap-4 text-sm">
+                              <span className="text-blue-600 font-semibold">{venue.price}</span>
+                              <div className="flex items-center gap-1 text-gray-600">
+                                <Users className="w-4 h-4" />
+                                <span>{venue.capacity} guests</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
-              <button
-                type="submit"
-                className="w-full bg-gradient-to-r from-[#800020] via-[#600018] to-[#400010] hover:from-[#600018] hover:via-[#400010] hover:to-[#200008] transition-all duration-300 rounded-[20px] py-4 shadow-lg hover:shadow-xl hover:scale-[1.02] transform disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-                disabled={!startDate || loading}
-              >
-                <span className="font-['Plus_Jakarta_Sans'] font-normal text-xl text-white flex items-center justify-center gap-2">
-                  <span>🚀</span>
-                  {loading ? 'Processing...' : isEditing ? 'Update Event' : 'Send Approval Request'}
-                </span>
-              </button>
+
+              <div className="border-t pt-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Or enter custom venue *
+                </label>
+                <input
+                  type="text"
+                  value={selectedVenue}
+                  onChange={(e) => setSelectedVenue(e.target.value)}
+                  placeholder="Enter venue name or location"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Step 4: Review */}
+          {currentStep === 4 && (
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">Review Your Event</h2>
+                <p className="text-gray-600">Make sure everything looks good</p>
+              </div>
+
+              <div className="space-y-4">
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h3 className="text-sm font-medium text-gray-500 mb-1">Event Title</h3>
+                  <p className="text-lg font-semibold text-gray-900">{eventTitle}</p>
+                </div>
+
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h3 className="text-sm font-medium text-gray-500 mb-1">Category</h3>
+                  <p className="text-lg font-semibold text-gray-900">{selectedCategory}</p>
+                </div>
+
+                {description && (
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <h3 className="text-sm font-medium text-gray-500 mb-1">Description</h3>
+                    <p className="text-gray-900">{description}</p>
+                  </div>
+                )}
+
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h3 className="text-sm font-medium text-gray-500 mb-1">Date</h3>
+                  <p className="text-lg font-semibold text-gray-900">
+                    {startDate?.toLocaleDateString('en-US', { 
+                      weekday: 'long', 
+                      month: 'long', 
+                      day: 'numeric', 
+                      year: 'numeric' 
+                    })}
+                    {endDate && ` - ${endDate.toLocaleDateString('en-US', { 
+                      weekday: 'long', 
+                      month: 'long', 
+                      day: 'numeric', 
+                      year: 'numeric' 
+                    })}`}
+                  </p>
+                </div>
+
+                {(startTime || endTime) && (
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <h3 className="text-sm font-medium text-gray-500 mb-1">Time</h3>
+                    <p className="text-lg font-semibold text-gray-900">
+                      {startTime && endTime ? `${startTime} - ${endTime}` : startTime || endTime}
+                    </p>
+                  </div>
+                )}
+
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h3 className="text-sm font-medium text-gray-500 mb-1">Venue</h3>
+                  <p className="text-lg font-semibold text-gray-900">{selectedVenue}</p>
+                </div>
+              </div>
 
               {message && (
-                <div className={`mt-4 p-4 rounded-[15px] text-center ${
+                <div className={`p-4 rounded-lg ${
                   message.includes('successfully')
-                    ? 'bg-green-100 text-green-800 border border-green-200'
-                    : 'bg-red-100 text-red-800 border border-red-200'
+                    ? 'bg-green-50 text-green-800 border border-green-200'
+                    : 'bg-red-50 text-red-800 border border-red-200'
                 }`}>
-                  <p className="font-['Poppins'] text-sm">{message}</p>
+                  {message}
                 </div>
               )}
-            </form>
-          </div>
+            </div>
+          )}
+        </div>
+
+        {/* Navigation Buttons */}
+        <div className="flex items-center justify-between">
+          <button
+            onClick={handleBack}
+            disabled={currentStep === 1}
+            className="px-6 py-3 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Back
+          </button>
+
+          {currentStep < 4 ? (
+            <button
+              onClick={handleNext}
+              disabled={!canProceedToNextStep()}
+              className="px-8 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Continue
+            </button>
+          ) : (
+            <button
+              onClick={handleSubmit}
+              disabled={loading}
+              className="px-8 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? 'Creating...' : isEditing ? 'Update Event' : 'Create Event'}
+            </button>
+          )}
         </div>
       </main>
     </div>
