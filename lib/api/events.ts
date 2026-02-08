@@ -10,6 +10,8 @@ export interface CreateEventData {
   capacity?: number;
   ticketPrice?: number;
   isPublic: boolean;
+  duration?: string;
+  notes?: string;
 }
 
 export const createEvent = async (eventData: CreateEventData) => {
@@ -36,5 +38,23 @@ export const getUserEvents = async () => {
     return response.data;
   } catch (error: any) {
     throw new Error(error.response?.data?.message || "Failed to fetch user events");
+  }
+};
+
+export const updateEvent = async (eventId: string, eventData: Partial<CreateEventData>) => {
+  try {
+    const response = await axios.put(`/api/events/${eventId}`, eventData);
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.message || "Failed to update event");
+  }
+};
+
+export const deleteEvent = async (eventId: string) => {
+  try {
+    const response = await axios.delete(`/api/events/${eventId}`);
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.message || "Failed to delete event");
   }
 };

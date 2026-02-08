@@ -2,11 +2,13 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import NavigationBar from "@/components/NavigationBar";
 import EventCard from "@/components/EventCard";
-import { getUserEvents } from "@/lib/api/events";
+import { getUserEvents, deleteEvent } from "@/lib/api/events";
 
 export default function MyEventsPage() {
+  const router = useRouter();
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -62,6 +64,25 @@ export default function MyEventsPage() {
     }
   }, []);
 
+  const handleEdit = (event: any) => {
+    // Store event data in localStorage for editing
+    localStorage.setItem('editEvent', JSON.stringify(event));
+    router.push('/create-event');
+  };
+
+  const handleDelete = async (eventId: string) => {
+    try {
+      await deleteEvent(eventId);
+      // Refresh the events list
+      const response = await getUserEvents();
+      if (response.success) {
+        setEvents(response.data || []);
+      }
+    } catch (err: any) {
+      setError(err.message || "Failed to delete event");
+    }
+  };
+
   return (
     <main className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-gray-100">
       <NavigationBar profilePicture={profilePicture} />
@@ -98,7 +119,13 @@ export default function MyEventsPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {events.map((event) => (
-              <EventCard key={event._id} event={event} />
+              <EventCard 
+                key={event._id} 
+                event={event} 
+                showActions={true}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+              />
             ))}
           </div>
         )}
