@@ -108,13 +108,18 @@ export default function LoginForm() {
           </button>
         </div>
       </form>
-
+      <p className="text-right text-sm text-gray-600 mt-2">
+        <Link href="/request-password-reset" className="text-rose-900 font-semibold hover:underline">
+          Forgot password?
+        </Link>
+      </p>
       <p className="text-center text-sm text-gray-600 mt-6">
         Dont have an account?{" "}
         <Link href="/register" className="text-rose-900 font-semibold hover:underline">
           Sign Up
         </Link>
       </p>
+      
     </div>
   );
 }

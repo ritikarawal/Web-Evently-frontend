@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { getProfile, logout } from "@/lib/api/auth";
+import NavigationBar from "@/components/NavigationBar";
+import { FaBirthdayCake, FaHeart, FaRing, FaGem, FaTools, FaMicrophone, FaGraduationCap, FaDonate } from "react-icons/fa";
 
 export default function HomePage() {
   const router = useRouter();
@@ -72,129 +74,66 @@ export default function HomePage() {
   const eventCategories = [
     {
       name: "Birthday",
-      icon: "🎂",
-      color: "bg-rose-100",
-      hoverColor: "hover:bg-rose-200"
+      icon: FaBirthdayCake,
+      iconColor: "text-pink-500",
+      color: "bg-blue-50",
+      hoverColor: "hover:bg-blue-100"
     },
     {
       name: "Anniversary",
-      icon: "💕",
-      color: "bg-rose-100",
-      hoverColor: "hover:bg-rose-200"
+      icon: FaHeart,
+      iconColor: "text-red-500",
+      color: "bg-blue-50",
+      hoverColor: "hover:bg-blue-100"
     },
     {
       name: "Wedding",
-      icon: "👫",
-      color: "bg-rose-100",
-      hoverColor: "hover:bg-rose-200"
+      icon: FaRing,
+      iconColor: "text-purple-500",
+      color: "bg-blue-50",
+      hoverColor: "hover:bg-blue-100"
     },
     {
       name: "Engagement",
-      icon: "💍",
-      color: "bg-rose-100",
-      hoverColor: "hover:bg-rose-200"
+      icon: FaGem,
+      iconColor: "text-blue-500",
+      color: "bg-blue-50",
+      hoverColor: "hover:bg-blue-100"
     },
     {
       name: "Workshop",
-      icon: "👨‍💼",
-      color: "bg-rose-100",
-      hoverColor: "hover:bg-rose-200"
+      icon: FaTools,
+      iconColor: "text-green-500",
+      color: "bg-blue-50",
+      hoverColor: "hover:bg-blue-100"
     },
     {
       name: "Conference",
-      icon: "🏛️",
-      color: "bg-rose-100",
-      hoverColor: "hover:bg-rose-200"
+      icon: FaMicrophone,
+      iconColor: "text-indigo-500",
+      color: "bg-blue-50",
+      hoverColor: "hover:bg-blue-100"
     },
     {
       name: "Graduation",
-      icon: "🎓",
-      color: "bg-rose-100",
-      hoverColor: "hover:bg-rose-200"
+      icon: FaGraduationCap,
+      iconColor: "text-yellow-500",
+      color: "bg-blue-50",
+      hoverColor: "hover:bg-blue-100"
     },
     {
       name: "Fundraisers",
-      icon: "🎁",
-      color: "bg-rose-100",
-      hoverColor: "hover:bg-rose-200"
+      icon: FaDonate,
+      iconColor: "text-orange-500",
+      color: "bg-blue-50",
+      hoverColor: "hover:bg-blue-100"
     }
   ];
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-rose-300 via-rose-200 to-pink-100">
+    <main className="min-h-screen" style={{ background: '#FFE4E1' }}>
       {/* Header */}
-      <header className="bg-rose-400/90 backdrop-blur-sm shadow-md">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          {/* Logo */}
-          <div className="flex items-center">
-            <Image
-              src="/evently logo.png"
-              alt="Evently Logo"
-              width={60}
-              height={60}
-              className="object-contain"
-            />
-          </div>
-
-          {/* Search Bar */}
-          <div className="flex-1 max-w-md mx-8">
-            <div className="relative">
-              <button className="absolute left-3 top-1/2 -translate-y-1/2 px-3 py-1 bg-white border-r border-gray-300 rounded-l-lg text-sm text-gray-700 font-medium">
-                🏷️ Category
-              </button>
-              <input
-                type="text"
-                placeholder="Search"
-                className="w-full pl-32 pr-12 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-rose-500"
-              />
-              <button className="absolute right-2 top-1/2 -translate-y-1/2 bg-rose-600 text-white p-2 rounded-md hover:bg-rose-700 transition-colors">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-              </button>
-            </div>
-          </div>
-
-          {/* Profile Button */}
-          <button 
-            onClick={() => router.push('/profile')}
-            className="w-10 h-10 rounded-full bg-gradient-to-br from-rose-400 to-pink-500 flex items-center justify-center text-white shadow-md hover:shadow-lg transition-all duration-300 hover:scale-110 overflow-hidden"
-          >
-            {profilePicture ? (
-              <Image
-                src={profilePicture}
-                alt="Profile"
-                width={40}
-                height={40}
-                unoptimized
-                className="w-full h-full object-cover" 
-              />
-            ) : (
-              <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-              </svg>
-            )}
-          </button>
-        </div>
-
-        {/* Navigation Tabs */}
-        <nav className="max-w-7xl mx-auto px-6">
-          <div className="flex gap-8 border-b border-rose-300/50">
-            <button className="px-4 py-3 font-medium text-gray-800 border-b-2 border-gray-800">
-              Events
-            </button>
-            <button className="px-4 py-3 font-medium text-gray-700 hover:text-gray-900 transition-colors">
-              My Events
-            </button>
-            <button className="px-4 py-3 font-medium text-gray-700 hover:text-gray-900 transition-colors">
-              Notification
-            </button>
-            <button className="px-4 py-3 font-medium text-gray-700 hover:text-gray-900 transition-colors">
-              Settings
-            </button>
-          </div>
-        </nav>
-      </header>
+      <NavigationBar profilePicture={profilePicture} />
 
       {/* Main Content */}
       <section className="max-w-7xl mx-auto px-6 py-12">
@@ -202,20 +141,34 @@ export default function HomePage() {
           {eventCategories.map((category, index) => (
             <Link
               key={category.name}
-              href={`/events/${category.name.toLowerCase()}`}
+              href={`/create-event?category=${category.name.toLowerCase()}`}
               className={`${category.color} ${category.hoverColor} rounded-2xl p-8 flex flex-col items-center justify-center gap-4 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 group cursor-pointer`}
               style={{
                 animation: `fadeInUp 0.5s ease-out ${index * 0.1}s backwards`
               }}
             >
               <div className="text-6xl group-hover:scale-110 transition-transform duration-300">
-                {category.icon}
+                <category.icon className={category.iconColor} />
               </div>
               <h3 className="text-lg font-semibold text-gray-800">
                 {category.name}
               </h3>
             </Link>
           ))}
+        </div>
+      </section>
+
+      {/* Create Event Section */}
+      <section className="max-w-7xl mx-auto px-6 py-12">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">Ready to Create Your Event?</h2>
+          <p className="text-gray-600 mb-8">Organize and manage events effortlessly with Evently.</p>
+          <Link
+            href="/create-event"
+            className="inline-block bg-blue-600 text-white px-8 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+          >
+            Create New Event
+          </Link>
         </div>
       </section>
 

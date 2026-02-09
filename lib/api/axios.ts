@@ -44,6 +44,15 @@ axiosInstance.interceptors.response.use(
     (error) => {
         if (error.response?.status === 401) {
             console.error('[axios interceptor] 401 Unauthorized:', error.response?.data?.message);
+            // Clear invalid token
+            if (typeof document !== "undefined") {
+                document.cookie = "auth_token=; path=/; max-age=0";
+                document.cookie = "user_data=; path=/; max-age=0";
+            }
+            // Redirect to login if on client side
+            if (typeof window !== "undefined") {
+                window.location.href = "/auth/login";
+            }
         }
         return Promise.reject(error);
     }

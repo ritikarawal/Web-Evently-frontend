@@ -11,6 +11,11 @@ import {
   getAllUsers,
   updateUser,
 } from "@/lib/api/adminUsers";
+import {
+  getPendingEvents,
+  approveEvent,
+  declineEvent,
+} from "@/lib/api/adminEvents";
 
 interface UserItem {
   _id: string;
@@ -21,6 +26,26 @@ interface UserItem {
   role?: "user" | "admin";
   phoneNumber?: string;
   profilePicture?: string;
+}
+
+interface EventItem {
+  _id: string;
+  title: string;
+  description: string;
+  startDate: string;
+  endDate: string;
+  location: string;
+  category: string;
+  status: 'pending' | 'approved' | 'declined';
+  organizer: {
+    _id: string;
+    username?: string;
+    email?: string;
+    firstName?: string;
+    lastName?: string;
+  };
+  createdAt: string;
+  adminNotes?: string;
 }
 
 const initialFormState: AdminUserPayload = {
@@ -45,6 +70,9 @@ export default function AdminDashboardPage() {
   const [submitting, setSubmitting] = useState(false);
   const [imagePreview, setImagePreview] = useState<string>("");
   const [showModal, setShowModal] = useState(false);
+  const [activeTab, setActiveTab] = useState<'users' | 'events'>('users');
+  const [events, setEvents] = useState<EventItem[]>([]);
+  const [eventsLoading, setEventsLoading] = useState(false);
 
   const buttonLabel = useMemo(
     () => (editingId ? "Update User" : "Create User"),
@@ -77,7 +105,38 @@ export default function AdminDashboardPage() {
 
   useEffect(() => {
     loadUsers();
+    loadEvents();
   }, []);
+
+  const loadEvents = async () => {
+    setEventsLoading(true);
+    try {
+      const response = await getPendingEvents();
+      setEvents(response.data || []);
+    } catch (error: any) {
+      console.error('Failed to load events:', error);
+    } finally {
+      setEventsLoading(false);
+    }
+  };
+
+  const handleApproveEvent = async (eventId: string) => {
+    try {
+      await approveEvent(eventId);
+      await loadEvents(); // Refresh the list
+    } catch (error: any) {
+      console.error('Failed to approve event:', error);
+    }
+  };
+
+  const handleDeclineEvent = async (eventId: string, adminNotes?: string) => {
+    try {
+      await declineEvent(eventId, adminNotes);
+      await loadEvents(); // Refresh the list
+    } catch (error: any) {
+      console.error('Failed to decline event:', error);
+    }
+  };
 
   const handleChange = (field: keyof AdminUserPayload, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -167,7 +226,7 @@ export default function AdminDashboardPage() {
       <header className="px-8 py-6 flex items-center justify-between border-b border-slate-200 bg-white">
         <div>
           <h1 className="text-2xl font-bold">Admin Dashboard</h1>
-          <p className="text-sm text-gray-600">Manage users and roles</p>
+          <p className="text-sm text-gray-600">Manage users and event approvals</p>
         </div>
         <div className="flex gap-4">
           <Link href="/home" className="text-sm text-rose-900 hover:underline">
@@ -183,26 +242,54 @@ export default function AdminDashboardPage() {
       </header>
 
       <section className="px-8 py-8">
-        <div className="bg-white rounded-2xl shadow p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg font-semibold">Users</h2>
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={loadUsers}
-                className="px-4 py-2 text-sm text-rose-900 hover:underline"
-              >
-                Refresh
-              </button>
-              <button
-                type="button"
-                onClick={openCreateModal}
-                className="px-6 py-2 bg-rose-900 text-white rounded-lg text-sm font-semibold hover:bg-rose-800 transition-colors"
-              >
-                + Create User
-              </button>
-            </div>
+        {/* Tabs */}
+        <div className="bg-white rounded-2xl shadow p-6 mb-6">
+          <div className="flex space-x-1">
+            <button
+              onClick={() => setActiveTab('users')}
+              className={`px-6 py-2 rounded-lg text-sm font-medium transition-colors ${
+                activeTab === 'users'
+                  ? 'bg-rose-900 text-white'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+              }`}
+            >
+              Users
+            </button>
+            <button
+              onClick={() => setActiveTab('events')}
+              className={`px-6 py-2 rounded-lg text-sm font-medium transition-colors ${
+                activeTab === 'events'
+                  ? 'bg-rose-900 text-white'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+              }`}
+            >
+              Event Approvals
+            </button>
           </div>
+        </div>
+
+        {/* Users Tab */}
+        {activeTab === 'users' && (
+          <div className="bg-white rounded-2xl shadow p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-lg font-semibold">Users</h2>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={loadUsers}
+                  className="px-4 py-2 text-sm text-rose-900 hover:underline"
+                >
+                  Refresh
+                </button>
+                <button
+                  type="button"
+                  onClick={openCreateModal}
+                  className="px-6 py-2 bg-rose-900 text-white rounded-lg text-sm font-semibold hover:bg-rose-800 transition-colors"
+                >
+                  + Create User
+                </button>
+              </div>
+            </div>
 
           {error && (
             <div className="mb-4 rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700">
@@ -279,7 +366,70 @@ export default function AdminDashboardPage() {
             </div>
           )}
         </div>
-      </section>
+        )}
+
+        {/* Events Tab */}
+        {activeTab === 'events' && (
+          <div className="bg-white rounded-2xl shadow p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-lg font-semibold">Pending Event Approvals</h2>
+              <button
+                type="button"
+                onClick={loadEvents}
+                className="px-4 py-2 text-sm text-rose-900 hover:underline"
+              >
+                Refresh
+              </button>
+            </div>
+
+            {eventsLoading ? (
+              <p className="text-sm text-gray-600">Loading events...</p>
+            ) : events.length === 0 ? (
+              <p className="text-sm text-gray-600">No pending events found.</p>
+            ) : (
+              <div className="space-y-4">
+                {events.map((event) => (
+                  <div key={event._id} className="border border-gray-200 rounded-lg p-4">
+                    <div className="flex justify-between items-start mb-3">
+                      <div>
+                        <h3 className="font-semibold text-gray-900">{event.title}</h3>
+                        <p className="text-sm text-gray-600">
+                          Organizer: {event.organizer.firstName} {event.organizer.lastName} ({event.organizer.email})
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          Category: {event.category} | Location: {event.location}
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          Date: {new Date(event.startDate).toLocaleDateString()} - {new Date(event.endDate).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleApproveEvent(event._id)}
+                          className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
+                        >
+                          Approve
+                        </button>
+                        <button
+                          onClick={() => handleDeclineEvent(event._id)}
+                          className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors"
+                        >
+                          Decline
+                        </button>
+                      </div>
+                    </div>
+                    {event.description && (
+                      <p className="text-sm text-gray-700 mb-2">{event.description}</p>
+                    )}
+                    <div className="text-xs text-gray-500">
+                      Created: {new Date(event.createdAt).toLocaleDateString()}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
       {/* Modal */}
       {showModal && (
@@ -408,6 +558,7 @@ export default function AdminDashboardPage() {
           </div>
         </div>
       )}
+    </section>
     </main>
   );
 }
