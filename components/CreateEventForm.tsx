@@ -65,6 +65,7 @@ export default function CreateEventForm({ onCreate, onCancel }: CreateEventFormP
                             <option value="entertainment">Entertainment</option>
                             <option value="birthday">Birthday</option>
                             <option value="graduation">Graduation</option>
+                            <option value="anniversary">Anniversary</option>
                             <option value="other">Other</option>
                         </select>
                     </div>

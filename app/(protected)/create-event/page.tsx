@@ -46,7 +46,7 @@ function CreateEventContent() {
       { name: 'Celebration Hall', location: 'Lazimpat', rating: 4.6, price: '$$$', capacity: '100-150' },
       { name: 'Fun Zone Events', location: 'Durbarmarg', rating: 4.5, price: '$$', capacity: '30-80' }
     ],
-    music: [
+    music: [ 
       { name: 'Live Music Arena', location: 'Bouddha', rating: 4.7, price: '$$$', capacity: '500-1000' },
       { name: 'Rock Valley', location: 'Jhamsikhel', rating: 4.5, price: '$$', capacity: '200-400' },
       { name: 'Open Air Amphitheater', location: 'Patan', rating: 4.8, price: '$$$$', capacity: '1000+' }
@@ -75,6 +75,11 @@ function CreateEventContent() {
       { name: 'University Auditorium', location: 'Kirtipur', rating: 4.6, price: '$$', capacity: '300-500' },
       { name: 'Graduation Hall', location: 'Pulchowk', rating: 4.7, price: '$$$', capacity: '200-400' },
       { name: 'Academic Center', location: 'Balkhu', rating: 4.5, price: '$$', capacity: '150-300' }
+    ],
+    anniversary: [
+      { name: 'Romantic Garden Restaurant', location: 'Lazimpat', rating: 4.8, price: '$$$$', capacity: '20-50' },
+      { name: 'Anniversary Banquet Hall', location: 'Thamel', rating: 4.7, price: '$$$', capacity: '50-100' },
+      { name: 'Couples Retreat Center', location: 'Bouddha', rating: 4.6, price: '$$$', capacity: '30-80' }
     ],
     other: [
       { name: 'Community Center', location: 'Kalanki', rating: 4.4, price: '$', capacity: '50-150' },
