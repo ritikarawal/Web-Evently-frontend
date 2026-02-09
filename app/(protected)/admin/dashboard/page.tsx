@@ -12,9 +12,10 @@ import {
   updateUser,
 } from "@/lib/api/adminUsers";
 import {
-  getPendingEvents,
+  getAllEvents,
   approveEvent,
   declineEvent,
+  deleteEvent,
 } from "@/lib/api/adminEvents";
 
 interface UserItem {
@@ -111,7 +112,7 @@ export default function AdminDashboardPage() {
   const loadEvents = async () => {
     setEventsLoading(true);
     try {
-      const response = await getPendingEvents();
+      const response = await getAllEvents();
       setEvents(response.data || []);
     } catch (error: any) {
       console.error('Failed to load events:', error);
@@ -135,6 +136,20 @@ export default function AdminDashboardPage() {
       await loadEvents(); // Refresh the list
     } catch (error: any) {
       console.error('Failed to decline event:', error);
+    }
+  };
+
+  const handleDeleteEvent = async (eventId: string) => {
+    if (!confirm('Are you sure you want to delete this event? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      await deleteEvent(eventId);
+      await loadEvents(); // Refresh the list
+    } catch (error: any) {
+      console.error('Failed to delete event:', error);
+      alert('Failed to delete event: ' + (error.message || 'Unknown error'));
     }
   };
 
@@ -372,7 +387,7 @@ export default function AdminDashboardPage() {
         {activeTab === 'events' && (
           <div className="bg-white rounded-2xl shadow p-6">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-semibold">Pending Event Approvals</h2>
+              <h2 className="text-lg font-semibold">Event Management</h2>
               <button
                 type="button"
                 onClick={loadEvents}
@@ -385,14 +400,23 @@ export default function AdminDashboardPage() {
             {eventsLoading ? (
               <p className="text-sm text-gray-600">Loading events...</p>
             ) : events.length === 0 ? (
-              <p className="text-sm text-gray-600">No pending events found.</p>
+              <p className="text-sm text-gray-600">No events found.</p>
             ) : (
               <div className="space-y-4">
                 {events.map((event) => (
                   <div key={event._id} className="border border-gray-200 rounded-lg p-4">
                     <div className="flex justify-between items-start mb-3">
-                      <div>
-                        <h3 className="font-semibold text-gray-900">{event.title}</h3>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="font-semibold text-gray-900">{event.title}</h3>
+                          <span className={`px-2 py-1 text-xs rounded-full ${
+                            event.status === 'approved' ? 'bg-green-100 text-green-800' :
+                            event.status === 'declined' ? 'bg-red-100 text-red-800' :
+                            'bg-yellow-100 text-yellow-800'
+                          }`}>
+                            {event.status.charAt(0).toUpperCase() + event.status.slice(1)}
+                          </span>
+                        </div>
                         <p className="text-sm text-gray-600">
                           Organizer: {event.organizer.firstName} {event.organizer.lastName} ({event.organizer.email})
                         </p>
@@ -403,23 +427,41 @@ export default function AdminDashboardPage() {
                           Date: {new Date(event.startDate).toLocaleDateString()} - {new Date(event.endDate).toLocaleDateString()}
                         </p>
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 ml-4">
+                        {event.status === 'pending' && (
+                          <>
+                            <button
+                              onClick={() => handleApproveEvent(event._id)}
+                              className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
+                            >
+                              Approve
+                            </button>
+                            <button
+                              onClick={() => handleDeclineEvent(event._id)}
+                              className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors"
+                            >
+                              Decline
+                            </button>
+                          </>
+                        )}
                         <button
-                          onClick={() => handleApproveEvent(event._id)}
-                          className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
+                          onClick={() => handleDeleteEvent(event._id)}
+                          className="px-4 py-2 bg-gray-600 text-white rounded-lg text-sm font-medium hover:bg-gray-700 transition-colors flex items-center gap-1"
                         >
-                          Approve
-                        </button>
-                        <button
-                          onClick={() => handleDeclineEvent(event._id)}
-                          className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors"
-                        >
-                          Decline
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                          Delete
                         </button>
                       </div>
                     </div>
                     {event.description && (
                       <p className="text-sm text-gray-700 mb-2">{event.description}</p>
+                    )}
+                    {event.adminNotes && (
+                      <p className="text-sm text-blue-700 mb-2">
+                        <strong>Admin Notes:</strong> {event.adminNotes}
+                      </p>
                     )}
                     <div className="text-xs text-gray-500">
                       Created: {new Date(event.createdAt).toLocaleDateString()}

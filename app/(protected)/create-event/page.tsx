@@ -46,16 +46,6 @@ function CreateEventContent() {
       { name: 'Celebration Hall', location: 'Lazimpat', rating: 4.6, price: '$$$', capacity: '100-150' },
       { name: 'Fun Zone Events', location: 'Durbarmarg', rating: 4.5, price: '$$', capacity: '30-80' }
     ],
-    music: [ 
-      { name: 'Live Music Arena', location: 'Bouddha', rating: 4.7, price: '$$$', capacity: '500-1000' },
-      { name: 'Rock Valley', location: 'Jhamsikhel', rating: 4.5, price: '$$', capacity: '200-400' },
-      { name: 'Open Air Amphitheater', location: 'Patan', rating: 4.8, price: '$$$$', capacity: '1000+' }
-    ],
-    sports: [
-      { name: 'Stadium Complex', location: 'Dasharath Rangashala', rating: 4.7, price: '$$$$', capacity: '5000+' },
-      { name: 'Sports Arena', location: 'Satdobato', rating: 4.5, price: '$$', capacity: '500-1000' },
-      { name: 'Athletic Center', location: 'Lagankhel', rating: 4.6, price: '$$$', capacity: '200-500' }
-    ],
     education: [
       { name: 'Academic Hall', location: 'Kirtipur', rating: 4.5, price: '$', capacity: '100-200' },
       { name: 'Learning Hub', location: 'Putalisadak', rating: 4.6, price: '$$', capacity: '30-50' },
