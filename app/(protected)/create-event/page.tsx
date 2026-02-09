@@ -41,45 +41,45 @@ function CreateEventContent() {
     price: string;
     capacity: string;
   }>> = {
-    Birthday: [
+    birthday: [
       { name: 'Party Palace Kathmandu', location: 'Thamel', rating: 4.8, price: '$$', capacity: '50-100' },
       { name: 'Celebration Hall', location: 'Lazimpat', rating: 4.6, price: '$$$', capacity: '100-150' },
       { name: 'Fun Zone Events', location: 'Durbarmarg', rating: 4.5, price: '$$', capacity: '30-80' }
     ],
-    Wedding: [
-      { name: 'Royal Banquet Hall', location: 'Lazimpat', rating: 4.9, price: '$$$$', capacity: '300-500' },
-      { name: 'Garden Palace', location: 'Thamel', rating: 4.8, price: '$$$$', capacity: '200-400' },
-      { name: 'Grand Celebration Center', location: 'Naxal', rating: 4.7, price: '$$$', capacity: '250-350' }
-    ],
-    Conference: [
-      { name: 'Business Hub Kathmandu', location: 'Durbar Marg', rating: 4.7, price: '$$$', capacity: '100-200' },
-      { name: 'Tech Convention Center', location: 'Pulchowk', rating: 4.6, price: '$$', capacity: '150-250' },
-      { name: 'Executive Meeting Space', location: 'Baluwatar', rating: 4.8, price: '$$$$', capacity: '50-100' }
-    ],
-    Concert: [
+    music: [
       { name: 'Live Music Arena', location: 'Bouddha', rating: 4.7, price: '$$$', capacity: '500-1000' },
       { name: 'Rock Valley', location: 'Jhamsikhel', rating: 4.5, price: '$$', capacity: '200-400' },
       { name: 'Open Air Amphitheater', location: 'Patan', rating: 4.8, price: '$$$$', capacity: '1000+' }
     ],
-    Exhibition: [
-      { name: 'Art Gallery Nepal', location: 'Babar Mahal', rating: 4.6, price: '$$', capacity: '100-150' },
-      { name: 'Expo Center Kathmandu', location: 'Bhrikutimandap', rating: 4.5, price: '$$$', capacity: '500-1000' },
-      { name: 'Modern Display Hall', location: 'Tripureshwor', rating: 4.4, price: '$$', capacity: '200-300' }
-    ],
-    Sports: [
+    sports: [
       { name: 'Stadium Complex', location: 'Dasharath Rangashala', rating: 4.7, price: '$$$$', capacity: '5000+' },
       { name: 'Sports Arena', location: 'Satdobato', rating: 4.5, price: '$$', capacity: '500-1000' },
       { name: 'Athletic Center', location: 'Lagankhel', rating: 4.6, price: '$$$', capacity: '200-500' }
     ],
-    Workshop: [
+    education: [
+      { name: 'Academic Hall', location: 'Kirtipur', rating: 4.5, price: '$', capacity: '100-200' },
       { name: 'Learning Hub', location: 'Putalisadak', rating: 4.6, price: '$$', capacity: '30-50' },
-      { name: 'Creative Space', location: 'Jhamsikhel', rating: 4.7, price: '$$', capacity: '20-40' },
       { name: 'Innovation Lab', location: 'Kupondole', rating: 4.8, price: '$$$', capacity: '40-60' }
     ],
-    Seminar: [
-      { name: 'Academic Hall', location: 'Kirtipur', rating: 4.5, price: '$', capacity: '100-200' },
-      { name: 'Professional Center', location: 'New Baneshwor', rating: 4.7, price: '$$', capacity: '80-150' },
-      { name: 'Conference Suite', location: 'Hattisar', rating: 4.6, price: '$$$', capacity: '50-100' }
+    business: [
+      { name: 'Business Hub Kathmandu', location: 'Durbar Marg', rating: 4.7, price: '$$$', capacity: '100-200' },
+      { name: 'Executive Meeting Space', location: 'Baluwatar', rating: 4.8, price: '$$$$', capacity: '50-100' },
+      { name: 'Professional Center', location: 'New Baneshwor', rating: 4.7, price: '$$', capacity: '80-150' }
+    ],
+    entertainment: [
+      { name: 'Grand Celebration Center', location: 'Naxal', rating: 4.7, price: '$$$', capacity: '250-350' },
+      { name: 'Fun Zone Events', location: 'Durbarmarg', rating: 4.5, price: '$$', capacity: '30-80' },
+      { name: 'Modern Display Hall', location: 'Tripureshwor', rating: 4.4, price: '$$', capacity: '200-300' }
+    ],
+    graduation: [
+      { name: 'University Auditorium', location: 'Kirtipur', rating: 4.6, price: '$$', capacity: '300-500' },
+      { name: 'Graduation Hall', location: 'Pulchowk', rating: 4.7, price: '$$$', capacity: '200-400' },
+      { name: 'Academic Center', location: 'Balkhu', rating: 4.5, price: '$$', capacity: '150-300' }
+    ],
+    other: [
+      { name: 'Community Center', location: 'Kalanki', rating: 4.4, price: '$', capacity: '50-150' },
+      { name: 'Local Hall', location: 'Swayambhu', rating: 4.3, price: '$', capacity: '30-100' },
+      { name: 'Multi-purpose Venue', location: 'Chabahil', rating: 4.5, price: '$$', capacity: '100-200' }
     ]
   };
 
@@ -90,8 +90,7 @@ function CreateEventContent() {
   useEffect(() => {
     const categoryParam = searchParams.get('category');
     if (categoryParam) {
-      const capitalizedCategory = categoryParam.charAt(0).toUpperCase() + categoryParam.slice(1);
-      setSelectedCategory(capitalizedCategory);
+      setSelectedCategory(categoryParam.toLowerCase());
     }
   }, [searchParams]);
 
@@ -102,7 +101,7 @@ function CreateEventContent() {
         const event = JSON.parse(editEventData);
         setIsEditing(true);
         setEditEventId(event._id);
-        setSelectedCategory(event.category.charAt(0).toUpperCase() + event.category.slice(1));
+        setSelectedCategory(event.category.toLowerCase());
         setEventTitle(event.title || '');
         setStartDate(new Date(event.startDate));
         setEndDate(new Date(event.endDate));

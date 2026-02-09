@@ -3,6 +3,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Bell } from "lucide-react";
+import { useNotifications } from "@/contexts/NotificationContext";
 
 interface NavigationBarProps {
   profilePicture: string | null;
@@ -10,6 +12,7 @@ interface NavigationBarProps {
 
 export default function NavigationBar({ profilePicture }: NavigationBarProps) {
   const router = useRouter();
+  const { unreadCount, refreshNotifications } = useNotifications();
 
   return (
     <header className="bg-gradient-to-r from-[#db8585] to-[#c76b6b] shadow-xl">
@@ -46,7 +49,24 @@ export default function NavigationBar({ profilePicture }: NavigationBarProps) {
           </div>
         </div>
 
-        {/* Profile Button */}
+        {/* Notifications and Profile */}
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => {
+              refreshNotifications();
+              router.push('/notifications');
+            }}
+            className="relative p-2 rounded-lg hover:bg-white/10 transition-colors"
+          >
+            <Bell className="w-6 h-6 text-white" />
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
+          </button>
+          
+          {/* Profile Button */}
         <button
           onClick={() => router.push('/profile')}
           className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 overflow-hidden border border-white/30"
@@ -66,6 +86,7 @@ export default function NavigationBar({ profilePicture }: NavigationBarProps) {
             </svg>
           )}
         </button>
+        </div>
       </div>
 
       {/* Navigation Tabs */}
