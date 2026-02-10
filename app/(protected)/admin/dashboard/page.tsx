@@ -74,6 +74,10 @@ export default function AdminDashboardPage() {
   const [activeTab, setActiveTab] = useState<'users' | 'events'>('users');
   const [events, setEvents] = useState<EventItem[]>([]);
   const [eventsLoading, setEventsLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalUsers, setTotalUsers] = useState(0);
+  const [pageSize] = useState(10);
 
   const buttonLabel = useMemo(
     () => (editingId ? "Update User" : "Create User"),
@@ -85,13 +89,16 @@ export default function AdminDashboardPage() {
     router.push("/login");
   };
 
-  const loadUsers = async () => {
+  const loadUsers = async (page: number = currentPage) => {
     setLoading(true);
     setError("");
     try {
-      const response = await getAllUsers();
+      const response = await getAllUsers(page, pageSize);
       console.log('getAllUsers response:', response);
       setUsers(response.data || []);
+      setTotalPages(response.pagination?.totalPages || 1);
+      setTotalUsers(response.pagination?.totalUsers || 0);
+      setCurrentPage(page);
     } catch (err: unknown) {
       console.error('getAllUsers error:', err);
       if (err instanceof Error) {
@@ -105,7 +112,7 @@ export default function AdminDashboardPage() {
   };
 
   useEffect(() => {
-    loadUsers();
+    loadUsers(1);
     loadEvents();
   }, []);
 
@@ -189,7 +196,7 @@ export default function AdminDashboardPage() {
         await createUser(formData);
       }
       resetForm();
-      await loadUsers();
+      await loadUsers(currentPage);
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message || "Failed to save user");
@@ -198,6 +205,12 @@ export default function AdminDashboardPage() {
       }
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handlePageChange = (page: number) => {
+    if (page >= 1 && page <= totalPages) {
+      loadUsers(page);
     }
   };
 
@@ -221,7 +234,7 @@ export default function AdminDashboardPage() {
     setError("");
     try {
       await deleteUser(userId);
-      await loadUsers();
+      await loadUsers(currentPage);
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message || "Failed to delete user");
@@ -291,7 +304,7 @@ export default function AdminDashboardPage() {
               <div className="flex gap-3">
                 <button
                   type="button"
-                  onClick={loadUsers}
+                  onClick={() => loadUsers()}
                   className="px-4 py-2 text-sm text-rose-900 hover:underline"
                 >
                   Refresh
@@ -378,6 +391,34 @@ export default function AdminDashboardPage() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          )}
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between mt-6">
+              <div className="text-sm text-gray-600">
+                Showing {users.length} of {totalUsers} users
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className="px-3 py-1 text-sm border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                >
+                  Previous
+                </button>
+                <span className="text-sm text-gray-600">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <button
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  className="px-3 py-1 text-sm border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                >
+                  Next
+                </button>
+              </div>
             </div>
           )}
         </div>
