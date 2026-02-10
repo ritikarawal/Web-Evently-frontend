@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import NavigationBar from "@/components/NavigationBar";
 import EventCard from "@/components/EventCard";
 import { getUserEvents, deleteEvent } from "@/lib/api/events";
+import { getProfile } from "@/lib/api/auth";
 
 export default function MyEventsPage() {
   const router = useRouter();
@@ -13,6 +14,7 @@ export default function MyEventsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     const fetchUserEvents = async () => {
@@ -62,6 +64,23 @@ export default function MyEventsPage() {
         // ignore invalid cookie payload
       }
     }
+
+    // Fetch profile to get role
+    const fetchProfile = async () => {
+      try {
+        const response = await getProfile();
+        const profilePic = response?.data?.profilePicture;
+        const userRole = response?.data?.role;
+        const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5050";
+        const resolvedUrl = profilePic ? `${baseUrl}${profilePic}` : null;
+        setProfilePicture(resolvedUrl);
+        setIsAdmin(userRole === 'admin');
+      } catch (error) {
+        console.error("Error fetching profile:", error);
+      }
+    };
+
+    fetchProfile();
   }, []);
 
   const handleEdit = (event: any) => {
@@ -85,7 +104,7 @@ export default function MyEventsPage() {
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-gray-100">
-      <NavigationBar profilePicture={profilePicture} />
+      <NavigationBar profilePicture={profilePicture} isAdmin={isAdmin} />
 
       <div className="max-w-7xl mx-auto px-6 py-12">
         <div className="flex items-center justify-between mb-8">

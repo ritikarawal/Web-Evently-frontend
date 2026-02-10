@@ -8,9 +8,10 @@ import { useNotifications } from "@/contexts/NotificationContext";
 
 interface NavigationBarProps {
   profilePicture: string | null;
+  isAdmin?: boolean;
 }
 
-export default function NavigationBar({ profilePicture }: NavigationBarProps) {
+export default function NavigationBar({ profilePicture, isAdmin = false }: NavigationBarProps) {
   const router = useRouter();
   const { unreadCount, refreshNotifications } = useNotifications();
 
@@ -105,6 +106,11 @@ export default function NavigationBar({ profilePicture }: NavigationBarProps) {
             <Link href="/settings" className="px-4 py-4 font-medium text-[#49516f] hover:text-black hover:bg-[#db8585]/5 rounded-t-lg transition-all duration-300">
               ⚙️ Settings
             </Link>
+            {isAdmin && (
+              <Link href="/admin/dashboard" className="px-4 py-4 font-medium text-[#49516f] hover:text-black hover:bg-[#db8585]/5 rounded-t-lg transition-all duration-300">
+                🛡️ Admin
+              </Link>
+            )}
           </div>
         </div>
       </nav>

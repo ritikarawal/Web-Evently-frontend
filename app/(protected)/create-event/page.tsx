@@ -224,6 +224,7 @@ function CreateEventContent() {
         location: selectedVenue || 'TBD',
         category: selectedCategory.toLowerCase(),
         isPublic: true,
+        status: 'pending',
         duration: `${startTime} - ${endTime}`,
         notes: description,
       };

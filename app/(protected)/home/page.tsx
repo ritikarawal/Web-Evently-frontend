@@ -16,7 +16,7 @@ interface Event {
   endDate: string;
   location: string;
   category: string;
-  status: 'draft' | 'published' | 'cancelled';
+  status: 'draft' | 'published' | 'cancelled' | 'pending' | 'approved' | 'declined';
   capacity: number;
   attendees: number;
   organizer: {
@@ -32,6 +32,7 @@ export default function HomePage() {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'upcoming' | 'past' | 'drafts'>('upcoming');
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const getCookieValue = (name: string) => {
     if (typeof document === "undefined") return null;
@@ -73,8 +74,10 @@ export default function HomePage() {
         const response = await getProfile();
         const profilePic = response?.data?.profilePicture;
         const resolvedUrl = profilePic ? `${baseUrl}${profilePic}` : null;
+        const userRole = response?.data?.role;
         if (isMounted) {
           setProfilePicture(resolvedUrl);
+          setIsAdmin(userRole === 'admin');
         }
       } catch (error) {
         console.error("Error fetching profile picture:", error);
@@ -126,36 +129,15 @@ export default function HomePage() {
 
     switch (activeTab) {
       case 'upcoming':
-        return eventDate >= now && event.status === 'published';
+        return eventDate >= now && event.status === 'approved';
       case 'past':
-        return eventDate < now && event.status === 'published';
+        return eventDate < now && event.status === 'approved';
       case 'drafts':
         return event.status === 'draft';
       default:
         return true;
     }
   });
-
-  const quickStats = [
-    {
-      icon: FaCalendarAlt,
-      label: "Total Events",
-      value: events.length.toString(),
-      color: "text-blue-600"
-    },
-    {
-      icon: FaUsers,
-      label: "Total Attendees",
-      value: events.reduce((sum, event) => sum + event.attendees, 0).toString(),
-      color: "text-green-600"
-    },
-    {
-      icon: FaTicketAlt,
-      label: "Published Events",
-      value: events.filter(e => e.status === 'published').length.toString(),
-      color: "text-purple-600"
-    }
-  ];
 
   const eventCategories = [
     {
@@ -227,7 +209,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
       {/* Header */}
-      <NavigationBar profilePicture={profilePicture} />
+      <NavigationBar profilePicture={profilePicture} isAdmin={isAdmin} />
 
       {/* Dashboard Header */}
       <section className="max-w-7xl mx-auto px-6 py-8">
@@ -243,23 +225,6 @@ export default function HomePage() {
             <FaPlus className="w-5 h-5" />
             Create New Event
           </Link>
-        </div>
-
-        {/* Quick Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          {quickStats.map((stat, index) => (
-            <div key={stat.label} className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
-              <div className="flex items-center gap-4">
-                <div className={`p-3 rounded-xl bg-gradient-to-br from-indigo-100 to-purple-100`}>
-                  <stat.icon className={`w-8 h-8 ${stat.color}`} />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
-                  <p className="text-sm text-gray-600">{stat.label}</p>
-                </div>
-              </div>
-            </div>
-          ))}
         </div>
       </section>
 
