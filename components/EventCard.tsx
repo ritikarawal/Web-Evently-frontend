@@ -20,6 +20,7 @@ interface EventCardProps {
   onLeave?: (eventId: string) => void;
   currentUserId?: string;
   isLoggedIn?: boolean;
+  isOrganizer?: boolean;
 }
 
 export default function EventCard({ 
@@ -30,7 +31,8 @@ export default function EventCard({
   onJoin, 
   onLeave, 
   currentUserId,
-  isLoggedIn = false 
+  isLoggedIn = false,
+  isOrganizer = false
 }: EventCardProps) {
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -137,7 +139,7 @@ export default function EventCard({
         )}
       </div>
 
-      {showActions && (
+      {showActions && isOrganizer && (
         <div className="flex gap-3 mt-6 pt-6 border-t border-gray-200">
           <button
             onClick={() => onEdit?.(event)}
@@ -154,6 +156,21 @@ export default function EventCard({
             className="flex-1 bg-red-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-700 transition-colors"
           >
             🗑️ Delete
+          </button>
+        </div>
+      )}
+
+      {/* Show Leave button for attendees in My Events */}
+      {showActions && !isOrganizer && isUserAttending && (
+        <div className="flex gap-3 mt-6 pt-6 border-t border-gray-200">
+          <button
+            onClick={() => onLeave?.(event._id)}
+            className="flex-1 bg-red-500 text-white px-4 py-3 rounded-lg font-medium hover:bg-red-600 transition-colors flex items-center justify-center gap-2"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+            Leave Event
           </button>
         </div>
       )}

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import NavigationBar from "@/components/NavigationBar";
 import EventCard from "@/components/EventCard";
-import { getUserEvents, deleteEvent } from "@/lib/api/events";
+import { getUserEvents, deleteEvent, leaveEvent } from "@/lib/api/events";
 import { getProfile } from "@/lib/api/auth";
 
 export default function MyEventsPage() {
@@ -15,6 +15,7 @@ export default function MyEventsPage() {
   const [error, setError] = useState<string | null>(null);
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchUserEvents = async () => {
@@ -71,10 +72,12 @@ export default function MyEventsPage() {
         const response = await getProfile();
         const profilePic = response?.data?.profilePicture;
         const userRole = response?.data?.role;
+        const userId = response?.data?._id;
         const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5050";
         const resolvedUrl = profilePic ? `${baseUrl}${profilePic}` : null;
         setProfilePicture(resolvedUrl);
         setIsAdmin(userRole === 'admin');
+        setCurrentUserId(userId);
       } catch (error) {
         console.error("Error fetching profile:", error);
       }
@@ -99,6 +102,19 @@ export default function MyEventsPage() {
       }
     } catch (err: any) {
       setError(err.message || "Failed to delete event");
+    }
+  };
+
+  const handleLeave = async (eventId: string) => {
+    try {
+      await leaveEvent(eventId);
+      // Refresh the events list
+      const response = await getUserEvents();
+      if (response.success) {
+        setEvents(response.data || []);
+      }
+    } catch (err: any) {
+      setError(err.message || "Failed to leave event");
     }
   };
 
@@ -137,15 +153,22 @@ export default function MyEventsPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {events.map((event) => (
-              <EventCard 
-                key={event._id} 
-                event={event} 
-                showActions={true}
-                onEdit={handleEdit}
-                onDelete={handleDelete}
-              />
-            ))}
+            {events.map((event) => {
+              const isOrganizer = currentUserId ? event.organizer?._id === currentUserId : false;
+              return (
+                <EventCard 
+                  key={event._id} 
+                  event={event} 
+                  showActions={true}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                  onLeave={handleLeave}
+                  currentUserId={currentUserId || undefined}
+                  isLoggedIn={true}
+                  isOrganizer={isOrganizer}
+                />
+              );
+            })}
           </div>
         )}
       </div>
