@@ -58,3 +58,30 @@ export const deleteEvent = async (eventId: string) => {
     throw new Error(error.response?.data?.message || "Failed to delete event");
   }
 };
+
+export const joinEvent = async (eventId: string) => {
+  try {
+    const response = await axios.post(`/api/events/${eventId}/join`);
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.message || "Failed to join event");
+  }
+};
+
+export const leaveEvent = async (eventId: string) => {
+  try {
+    const response = await axios.post(`/api/events/${eventId}/leave`);
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.message || "Failed to leave event");
+  }
+};
+
+export const getEventById = async (eventId: string) => {
+  try {
+    const response = await axios.get(`/api/events/${eventId}`);
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.message || "Failed to fetch event");
+  }
+};

@@ -158,7 +158,8 @@ export default function EventsPage() {
     { value: "sports", label: "Sports" },
     { value: "education", label: "Education" },
     { value: "business", label: "Business" },
-    { value: "entertainment", label: "Entertainment" }
+    { value: "entertainment", label: "Entertainment" },
+    { value: "other", label: "Other" }
   ];
 
   const dateFilters = [

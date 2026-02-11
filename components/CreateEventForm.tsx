@@ -58,14 +58,19 @@ export default function CreateEventForm({ onCreate, onCancel }: CreateEventFormP
                             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                         >
                             <option value="">Select category</option>
+                            <option value="birthday">Birthday</option>
+                            <option value="anniversary">Anniversary</option>
+                            <option value="wedding">Wedding</option>
+                            <option value="engagement">Engagement</option>
+                            <option value="workshop">Workshop</option>
+                            <option value="conference">Conference</option>
+                            <option value="graduation">Graduation</option>
+                            <option value="fundraisers">Fundraisers</option>
                             <option value="music">Music</option>
                             <option value="sports">Sports</option>
                             <option value="education">Education</option>
                             <option value="business">Business</option>
                             <option value="entertainment">Entertainment</option>
-                            <option value="birthday">Birthday</option>
-                            <option value="graduation">Graduation</option>
-                            <option value="anniversary">Anniversary</option>
                             <option value="other">Other</option>
                         </select>
                     </div>

@@ -3,9 +3,11 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { getProfile, logout } from "@/lib/api/auth";
+import { getEvents, joinEvent, leaveEvent } from "@/lib/api/events";
 import NavigationBar from "@/components/NavigationBar";
+import EventCard from "@/components/EventCard";
 import { FaBirthdayCake, FaHeart, FaRing, FaGem, FaTools, FaMicrophone, FaGraduationCap, FaDonate, FaPlus, FaCalendarAlt, FaUsers, FaStar, FaEdit, FaEye, FaTrash, FaClock, FaMapMarkerAlt, FaTicketAlt } from "react-icons/fa";
 
 interface Event {
@@ -17,13 +19,14 @@ interface Event {
   location: string;
   category: string;
   status: 'draft' | 'published' | 'cancelled' | 'pending' | 'approved' | 'declined';
-  capacity: number;
-  attendees: number;
+  capacity?: number;
+  attendees: any[];
   organizer: {
     firstName: string;
     lastName: string;
   };
   createdAt: string;
+  isPublic: boolean;
 }
 
 export default function HomePage() {
@@ -31,8 +34,10 @@ export default function HomePage() {
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'upcoming' | 'past' | 'drafts'>('upcoming');
+  const [activeTab, setActiveTab] = useState<'upcoming' | 'past'>('upcoming');
   const [isAdmin, setIsAdmin] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | undefined>(undefined);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   const getCookieValue = (name: string) => {
     if (typeof document === "undefined") return null;
@@ -51,6 +56,22 @@ export default function HomePage() {
     }
     return null;
   };
+
+  const fetchPublicEvents = useCallback(async () => {
+    try {
+      // Fetch all public events that are approved or published
+      const response = await getEvents({ 
+        isPublic: true
+      });
+      
+      // Don't filter by categories - show all public approved/published events
+      setEvents(response.data || []);
+    } catch (error) {
+      console.error("Error fetching public events:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -75,53 +96,50 @@ export default function HomePage() {
         const profilePic = response?.data?.profilePicture;
         const resolvedUrl = profilePic ? `${baseUrl}${profilePic}` : null;
         const userRole = response?.data?.role;
+        const userId = response?.data?._id;
         if (isMounted) {
           setProfilePicture(resolvedUrl);
           setIsAdmin(userRole === 'admin');
+          setCurrentUserId(userId);
+          setIsLoggedIn(true);
         }
       } catch (error) {
         console.error("Error fetching profile picture:", error);
       }
     };
 
-    const fetchUserEvents = async () => {
-      try {
-        const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5050";
-        const response = await fetch(`${baseUrl}/api/events/user`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${getCookieValue('access_token')}`
-          }
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          if (isMounted) {
-            setEvents(data.data || []);
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching user events:", error);
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
-    };
-
     fetchProfilePicture();
-    fetchUserEvents();
+    fetchPublicEvents();
 
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [fetchPublicEvents]);
 
   const handleLogout = () => {
     logout();
     router.push("/login");
   };
+
+  const handleJoinEvent = useCallback(async (eventId: string) => {
+    try {
+      await joinEvent(eventId);
+      // Refresh events to show updated attendance
+      await fetchPublicEvents();
+    } catch (error: any) {
+      alert(error.message || 'Failed to join event');
+    }
+  }, [fetchPublicEvents]);
+
+  const handleLeaveEvent = useCallback(async (eventId: string) => {
+    try {
+      await leaveEvent(eventId);
+      // Refresh events to show updated attendance
+      await fetchPublicEvents();
+    } catch (error: any) {
+      alert(error.message || 'Failed to leave event');
+    }
+  }, [fetchPublicEvents]);
 
   const filteredEvents = events.filter(event => {
     const now = new Date();
@@ -129,11 +147,9 @@ export default function HomePage() {
 
     switch (activeTab) {
       case 'upcoming':
-        return eventDate >= now && event.status === 'approved';
+        return eventDate >= now; // Only show upcoming public events
       case 'past':
-        return eventDate < now && event.status === 'approved';
-      case 'drafts':
-        return event.status === 'draft';
+        return eventDate < now; // Show past public events
       default:
         return true;
     }
@@ -215,8 +231,8 @@ export default function HomePage() {
       <section className="max-w-7xl mx-auto px-6 py-8">
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">My Dashboard</h1>
-            <p className="text-gray-600">Manage your events and track your success</p>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Discover Events</h1>
+            <p className="text-gray-600">Find and join amazing public events in your area</p>
           </div>
           <Link
             href="/create-event"
@@ -236,8 +252,7 @@ export default function HomePage() {
             <nav className="flex">
               {[
                 { id: 'upcoming', label: 'Upcoming Events', icon: FaCalendarAlt },
-                { id: 'past', label: 'Past Events', icon: FaClock },
-                { id: 'drafts', label: 'Drafts', icon: FaEdit }
+                { id: 'past', label: 'Past Events', icon: FaClock }
               ].map((tab) => (
                 <button
                   key={tab.id}
@@ -261,7 +276,7 @@ export default function HomePage() {
               <div className="flex items-center justify-center py-12">
                 <div className="flex items-center space-x-3">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-                  <p className="text-gray-600">Loading your events...</p>
+                  <p className="text-gray-600">Loading events...</p>
                 </div>
               </div>
             ) : filteredEvents.length === 0 ? (
@@ -272,12 +287,10 @@ export default function HomePage() {
                 <h3 className="text-lg font-medium text-gray-900 mb-2">
                   {activeTab === 'upcoming' && 'No upcoming events'}
                   {activeTab === 'past' && 'No past events'}
-                  {activeTab === 'drafts' && 'No draft events'}
                 </h3>
                 <p className="text-gray-600 mb-6">
-                  {activeTab === 'upcoming' && 'Create your first event to get started!'}
-                  {activeTab === 'past' && 'Your completed events will appear here.'}
-                  {activeTab === 'drafts' && 'Save events as drafts to work on them later.'}
+                  {activeTab === 'upcoming' && 'Check back later for new public events!'}
+                  {activeTab === 'past' && 'Past public events will appear here.'}
                 </p>
                 {activeTab === 'upcoming' && (
                   <Link
@@ -285,82 +298,21 @@ export default function HomePage() {
                     className="inline-flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-3 rounded-xl font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all duration-200"
                   >
                     <FaPlus className="w-4 h-4" />
-                    Create Your First Event
+                    Create an Event
                   </Link>
                 )}
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredEvents.map((event) => (
-                  <div key={event._id} className="border border-gray-200 rounded-xl p-6 hover:shadow-md transition-shadow duration-200">
-                    <div className="flex justify-between items-start mb-4">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <h3 className="text-lg font-semibold text-gray-900">{event.title}</h3>
-                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                            event.status === 'published'
-                              ? 'bg-green-100 text-green-800'
-                              : event.status === 'draft'
-                              ? 'bg-yellow-100 text-yellow-800'
-                              : 'bg-red-100 text-red-800'
-                          }`}>
-                            {event.status}
-                          </span>
-                        </div>
-                        <p className="text-gray-600 mb-3 line-clamp-2">{event.description}</p>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                          <div className="flex items-center gap-2">
-                            <FaCalendarAlt className="w-4 h-4 text-gray-400" />
-                            <div>
-                              <span className="font-medium text-gray-500">Date:</span>
-                              <div className="text-gray-900">{new Date(event.startDate).toLocaleDateString()}</div>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <FaMapMarkerAlt className="w-4 h-4 text-gray-400" />
-                            <div>
-                              <span className="font-medium text-gray-500">Location:</span>
-                              <div className="text-gray-900">{event.location}</div>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <FaUsers className="w-4 h-4 text-gray-400" />
-                            <div>
-                              <span className="font-medium text-gray-500">Attendees:</span>
-                              <div className="text-gray-900">{event.attendees}/{event.capacity}</div>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <FaTicketAlt className="w-4 h-4 text-gray-400" />
-                            <div>
-                              <span className="font-medium text-gray-500">Category:</span>
-                              <div className="text-gray-900">{event.category}</div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-                      <div className="text-sm text-gray-500">
-                        Created {new Date(event.createdAt).toLocaleDateString()}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <button className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
-                          <FaEye className="w-4 h-4" />
-                          View
-                        </button>
-                        <button className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-blue-700 bg-blue-100 hover:bg-blue-200 rounded-lg transition-colors">
-                          <FaEdit className="w-4 h-4" />
-                          Edit
-                        </button>
-                        <button className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-red-700 bg-red-100 hover:bg-red-200 rounded-lg transition-colors">
-                          <FaTrash className="w-4 h-4" />
-                          Delete
-                        </button>
-                      </div>
-                    </div>
-                  </div>
+                  <EventCard
+                    key={event._id}
+                    event={event}
+                    onJoin={handleJoinEvent}
+                    onLeave={handleLeaveEvent}
+                    currentUserId={currentUserId}
+                    isLoggedIn={isLoggedIn}
+                  />
                 ))}
               </div>
             )}
