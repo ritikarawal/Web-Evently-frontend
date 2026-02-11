@@ -48,3 +48,15 @@ export const deleteEvent = async (eventId: string) => {
     throw new Error(error.response?.data?.message || "Failed to delete event");
   }
 };
+
+export const proposeBudget = async (eventId: string, data: {
+  proposedBudget: number;
+  message?: string;
+}) => {
+  try {
+    const response = await axios.put(`/api/admin/events/${eventId}/budget-proposal`, data);
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.message || "Failed to propose budget");
+  }
+};

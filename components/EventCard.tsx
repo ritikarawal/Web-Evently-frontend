@@ -12,12 +12,19 @@ interface EventCardProps {
     organizer?: any;
     attendees?: any[];
     isPublic?: boolean;
+    // Budget fields
+    proposedBudget?: number;
+    adminProposedBudget?: number;
+    finalBudget?: number;
+    budgetStatus?: 'pending' | 'negotiating' | 'accepted' | 'rejected';
+    status?: 'draft' | 'published' | 'cancelled' | 'pending' | 'approved' | 'declined';
   };
   showActions?: boolean;
   onEdit?: (event: any) => void;
   onDelete?: (eventId: string) => void;
   onJoin?: (eventId: string) => void;
   onLeave?: (eventId: string) => void;
+  onBudgetResponse?: (eventId: string, accepted: boolean, counterProposal?: number, message?: string) => void;
   currentUserId?: string;
   isLoggedIn?: boolean;
   isOrganizer?: boolean;
@@ -29,7 +36,8 @@ export default function EventCard({
   onEdit, 
   onDelete, 
   onJoin, 
-  onLeave, 
+  onLeave,
+  onBudgetResponse,
   currentUserId,
   isLoggedIn = false,
   isOrganizer = false
@@ -134,6 +142,70 @@ export default function EventCard({
             <div>
               <p className="font-semibold font-['Plus_Jakarta_Sans']">Ticket Price</p>
               <p className="font-['Poppins'] font-bold text-xl">${event.ticketPrice}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Budget Information for Organizers */}
+        {isOrganizer && (event.proposedBudget || event.adminProposedBudget || event.finalBudget) && (
+          <div className="mt-4 p-4 bg-blue-50 rounded-xl border border-blue-200">
+            <h4 className="font-semibold text-blue-800 mb-2 flex items-center gap-2">
+              <span className="text-lg">💼</span>
+              Budget Information
+            </h4>
+            <div className="space-y-1 text-sm">
+              {event.proposedBudget && (
+                <p className="text-blue-700">
+                  <span className="font-medium">Your Proposal:</span> ${event.proposedBudget}
+                </p>
+              )}
+              {event.adminProposedBudget && event.budgetStatus === 'negotiating' && (
+                <div className="mt-3 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                  <p className="text-yellow-800 font-medium mb-2">
+                    Admin Proposed: ${event.adminProposedBudget}
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => onBudgetResponse?.(event._id, true)}
+                      className="px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 transition-colors"
+                    >
+                      Accept
+                    </button>
+                    <button
+                      onClick={() => {
+                        const counterProposal = prompt('Enter your counter-proposal amount:');
+                        if (counterProposal) {
+                          const amount = parseFloat(counterProposal);
+                          if (!isNaN(amount) && amount > 0) {
+                            const message = prompt('Add a message (optional):');
+                            onBudgetResponse?.(event._id, false, amount, message || undefined);
+                          }
+                        }
+                      }}
+                      className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors"
+                    >
+                      Counter
+                    </button>
+                    <button
+                      onClick={() => {
+                        const message = prompt('Reason for rejection (optional):');
+                        onBudgetResponse?.(event._id, false, undefined, message || undefined);
+                      }}
+                      className="px-3 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors"
+                    >
+                      Reject
+                    </button>
+                  </div>
+                </div>
+              )}
+              {event.finalBudget && (
+                <p className="text-green-700 font-medium">
+                  Final Budget: ${event.finalBudget}
+                </p>
+              )}
+              <p className="text-xs text-blue-600 mt-1">
+                Status: {event.budgetStatus ? event.budgetStatus.charAt(0).toUpperCase() + event.budgetStatus.slice(1) : 'Unknown'}
+              </p>
             </div>
           </div>
         )}

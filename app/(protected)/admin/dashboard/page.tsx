@@ -16,6 +16,7 @@ import {
   approveEvent,
   declineEvent,
   deleteEvent,
+  proposeBudget,
 } from "@/lib/api/adminEvents";
 
 interface UserItem {
@@ -47,6 +48,18 @@ interface EventItem {
   };
   createdAt: string;
   adminNotes?: string;
+  // Budget fields
+  proposedBudget?: number;
+  adminProposedBudget?: number;
+  finalBudget?: number;
+  budgetStatus: 'pending' | 'negotiating' | 'accepted' | 'rejected';
+  budgetNegotiationHistory?: Array<{
+    proposer: 'user' | 'admin';
+    proposerId?: string;
+    amount: number;
+    message?: string;
+    timestamp: string;
+  }>;
 }
 
 const initialFormState: AdminUserPayload = {
@@ -72,6 +85,12 @@ export default function AdminDashboardPage() {
   const [imagePreview, setImagePreview] = useState<string>("");
   const [showModal, setShowModal] = useState(false);
   const [activeTab, setActiveTab] = useState<'users' | 'events'>('users');
+  const [showBudgetModal, setShowBudgetModal] = useState(false);
+  const [selectedEventForBudget, setSelectedEventForBudget] = useState<EventItem | null>(null);
+  const [budgetProposalData, setBudgetProposalData] = useState({
+    proposedBudget: '',
+    message: ''
+  });
   const [events, setEvents] = useState<EventItem[]>([]);
   const [eventsLoading, setEventsLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -145,7 +164,14 @@ export default function AdminDashboardPage() {
       console.error('Failed to decline event:', error);
     }
   };
-
+  const handleProposeBudget = async (eventId: string, proposedBudget: number, message?: string) => {
+    try {
+      await proposeBudget(eventId, { proposedBudget, message });
+      await loadEvents(); // Refresh the list
+    } catch (error: any) {
+      console.error('Failed to propose budget:', error);
+    }
+  };
   const handleDeleteEvent = async (eventId: string) => {
     if (!confirm('Are you sure you want to delete this event? This action cannot be undone.')) {
       return;
@@ -467,24 +493,79 @@ export default function AdminDashboardPage() {
                         <p className="text-sm text-gray-600">
                           Date: {new Date(event.startDate).toLocaleDateString()} - {new Date(event.endDate).toLocaleDateString()}
                         </p>
+                        {/* Budget Information */}
+                        <div className="mt-2 p-2 bg-blue-50 rounded-md">
+                          <p className="text-sm font-medium text-blue-800">Budget Information</p>
+                          {event.proposedBudget && (
+                            <p className="text-sm text-blue-700">
+                              User Proposed: ${event.proposedBudget}
+                            </p>
+                          )}
+                          {event.adminProposedBudget && (
+                            <p className="text-sm text-blue-700">
+                              Admin Proposed: ${event.adminProposedBudget}
+                            </p>
+                          )}
+                          {event.finalBudget && (
+                            <p className="text-sm text-green-700 font-medium">
+                              Final Budget: ${event.finalBudget}
+                            </p>
+                          )}
+                          <p className="text-xs text-blue-600">
+                            Status: {event.budgetStatus.charAt(0).toUpperCase() + event.budgetStatus.slice(1)}
+                          </p>
+                          {event.budgetNegotiationHistory && event.budgetNegotiationHistory.length > 0 && (
+                            <div className="mt-2">
+                              <p className="text-sm font-medium text-blue-800">Negotiation History:</p>
+                              <div className="max-h-32 overflow-y-auto space-y-1">
+                                {event.budgetNegotiationHistory.map((item, index) => (
+                                  <div key={index} className="text-xs bg-white p-2 rounded border">
+                                    <div className="flex justify-between items-start">
+                                      <span className={`font-medium ${item.proposer === 'admin' ? 'text-red-600' : 'text-green-600'}`}>
+                                        {item.proposer === 'admin' ? 'Admin' : 'User'}:
+                                      </span>
+                                      <span className="text-gray-500">
+                                        {new Date(item.timestamp).toLocaleString()}
+                                      </span>
+                                    </div>
+                                    <p className="text-gray-800">Amount: ${item.amount}</p>
+                                    {item.message && (
+                                      <p className="text-gray-600 italic">"{item.message}"</p>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       </div>
                       <div className="flex gap-2 ml-4">
-                        {event.status === 'pending' && (
-                          <>
-                            <button
-                              onClick={() => handleApproveEvent(event._id)}
-                              className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
-                            >
-                              Approve
-                            </button>
-                            <button
-                              onClick={() => handleDeclineEvent(event._id)}
-                              className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors"
-                            >
-                              Decline
-                            </button>
-                          </>
+                        {event.status === 'pending' && event.budgetStatus === 'pending' && (
+                          <button
+                            onClick={() => {
+                              setSelectedEventForBudget(event);
+                              setBudgetProposalData({ proposedBudget: '', message: '' });
+                              setShowBudgetModal(true);
+                            }}
+                            className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+                          >
+                            Propose Budget
+                          </button>
                         )}
+                        {event.status === 'pending' && event.budgetStatus === 'accepted' && (
+                          <button
+                            onClick={() => handleApproveEvent(event._id)}
+                            className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
+                          >
+                            Approve Event
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleDeclineEvent(event._id)}
+                          className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors"
+                        >
+                          Decline
+                        </button>
                         <button
                           onClick={() => handleDeleteEvent(event._id)}
                           className="px-4 py-2 bg-gray-600 text-white rounded-lg text-sm font-medium hover:bg-gray-700 transition-colors flex items-center gap-1"
@@ -638,6 +719,77 @@ export default function AdminDashboardPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Budget Proposal Modal */}
+      {showBudgetModal && selectedEventForBudget && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-lg font-semibold mb-4">Propose Budget for Event</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Event: {selectedEventForBudget.title}
+            </p>
+            {selectedEventForBudget.proposedBudget && (
+              <p className="text-sm text-blue-600 mb-4">
+                User proposed budget: ${selectedEventForBudget.proposedBudget}
+              </p>
+            )}
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Proposed Budget ($)
+                </label>
+                <input
+                  type="number"
+                  value={budgetProposalData.proposedBudget}
+                  onChange={(e) => setBudgetProposalData(prev => ({ ...prev, proposedBudget: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Enter proposed budget"
+                  step="0.01"
+                  required
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Message (Optional)
+                </label>
+                <textarea
+                  value={budgetProposalData.message}
+                  onChange={(e) => setBudgetProposalData(prev => ({ ...prev, message: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Add a message explaining the budget proposal..."
+                  rows={3}
+                />
+              </div>
+            </div>
+            
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => setShowBudgetModal(false)}
+                className="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  if (!budgetProposalData.proposedBudget) return;
+                  
+                  await handleProposeBudget(
+                    selectedEventForBudget._id,
+                    parseFloat(budgetProposalData.proposedBudget),
+                    budgetProposalData.message || undefined
+                  );
+                  setShowBudgetModal(false);
+                }}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Send Proposal
+              </button>
+            </div>
           </div>
         </div>
       )}

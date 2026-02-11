@@ -25,6 +25,7 @@ function CreateEventContent() {
   const [selectedVenue, setSelectedVenue] = useState('');
   const [isPublic, setIsPublic] = useState(true);
   const [capacity, setCapacity] = useState<string>('');
+  const [proposedBudget, setProposedBudget] = useState<string>('');
 
   const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -189,7 +190,7 @@ function CreateEventContent() {
   const canProceedToNextStep = () => {
     switch (currentStep) {
       case 1:
-        return eventTitle.trim() !== '' && selectedCategory !== '';
+        return eventTitle.trim() !== '' && selectedCategory !== '' && proposedBudget !== '' && parseFloat(proposedBudget) > 0;
       case 2:
         return startDate !== null;
       case 3:
@@ -229,6 +230,7 @@ function CreateEventContent() {
         category: selectedCategory.toLowerCase(),
         isPublic: isPublic,
         capacity: capacity ? parseInt(capacity) : undefined,
+        proposedBudget: proposedBudget ? parseFloat(proposedBudget) : 0,
         status: 'pending',
         duration: `${startTime} - ${endTime}`,
         notes: description,
@@ -377,6 +379,23 @@ function CreateEventContent() {
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
                   />
                   <p className="text-gray-500 text-xs mt-1">Leave empty for unlimited capacity</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    💰 Proposed Budget *
+                  </label>
+                  <input
+                    type="number"
+                    value={proposedBudget}
+                    onChange={(e) => setProposedBudget(e.target.value)}
+                    placeholder="e.g. 5000"
+                    min="0"
+                    step="0.01"
+                    required
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                  />
+                  <p className="text-gray-500 text-xs mt-1">Budget will be reviewed by admin before approval</p>
                 </div>
               </div>
 

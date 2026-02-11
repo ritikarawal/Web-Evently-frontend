@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import NavigationBar from "@/components/NavigationBar";
 import EventCard from "@/components/EventCard";
-import { getUserEvents, deleteEvent, leaveEvent } from "@/lib/api/events";
+import { getUserEvents, deleteEvent, leaveEvent, respondToBudgetProposal } from "@/lib/api/events";
 import { getProfile } from "@/lib/api/auth";
 
 export default function MyEventsPage() {
@@ -118,6 +118,19 @@ export default function MyEventsPage() {
     }
   };
 
+  const handleBudgetResponse = async (eventId: string, accepted: boolean, counterProposal?: number, message?: string) => {
+    try {
+      await respondToBudgetProposal(eventId, { accepted, counterProposal, message });
+      // Refresh the events list
+      const response = await getUserEvents();
+      if (response.success) {
+        setEvents(response.data || []);
+      }
+    } catch (err: any) {
+      setError(err.message || "Failed to respond to budget proposal");
+    }
+  };
+
   return (
     <main className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-gray-100">
       <NavigationBar profilePicture={profilePicture} isAdmin={isAdmin} />
@@ -163,6 +176,7 @@ export default function MyEventsPage() {
                   onEdit={handleEdit}
                   onDelete={handleDelete}
                   onLeave={handleLeave}
+                  onBudgetResponse={handleBudgetResponse}
                   currentUserId={currentUserId || undefined}
                   isLoggedIn={true}
                   isOrganizer={isOrganizer}
