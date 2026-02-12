@@ -57,7 +57,7 @@ interface EventItem {
     proposer: 'user' | 'admin';
     proposerId?: string;
     amount: number;
-    message?: string;
+    message?: string; 
     timestamp: string;
   }>;
 }
@@ -469,13 +469,41 @@ export default function AdminDashboardPage() {
             ) : events.length === 0 ? (
               <p className="text-sm text-gray-600">No events found.</p>
             ) : (
-              <div className="space-y-4">
-                {events.map((event) => (
-                  <div key={event._id} className="border border-gray-200 rounded-lg p-4">
-                    <div className="flex justify-between items-start mb-3">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h3 className="font-semibold text-gray-900">{event.title}</h3>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="text-left text-gray-500">
+                    <tr>
+                      <th className="pb-2">Event</th>
+                      <th className="pb-2">Organizer</th>
+                      <th className="pb-2">Status</th>
+                      <th className="pb-2">Budget</th>
+                      <th className="pb-2">Date</th>
+                      <th className="pb-2">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {events.map((event) => (
+                      <tr key={event._id} className="border-t border-gray-100">
+                        <td className="py-3">
+                          <div>
+                            <div className="font-medium text-gray-900">{event.title}</div>
+                            <div className="text-xs text-gray-500">{event.category} • {event.location}</div>
+                            {event.description && (
+                              <div className="text-xs text-gray-600 mt-1 max-w-xs truncate">
+                                {event.description.length > 50 ? `${event.description.substring(0, 50)}...` : event.description}
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-3">
+                          <div>
+                            <div className="font-medium">
+                              {event.organizer.firstName} {event.organizer.lastName}
+                            </div>
+                            <div className="text-xs text-gray-500">{event.organizer.email}</div>
+                          </div>
+                        </td>
+                        <td className="py-3">
                           <span className={`px-2 py-1 text-xs rounded-full ${
                             event.status === 'approved' ? 'bg-green-100 text-green-800' :
                             event.status === 'declined' ? 'bg-red-100 text-red-800' :
@@ -483,113 +511,82 @@ export default function AdminDashboardPage() {
                           }`}>
                             {event.status.charAt(0).toUpperCase() + event.status.slice(1)}
                           </span>
-                        </div>
-                        <p className="text-sm text-gray-600">
-                          Organizer: {event.organizer.firstName} {event.organizer.lastName} ({event.organizer.email})
-                        </p>
-                        <p className="text-sm text-gray-600">
-                          Category: {event.category} | Location: {event.location}
-                        </p>
-                        <p className="text-sm text-gray-600">
-                          Date: {new Date(event.startDate).toLocaleDateString()} - {new Date(event.endDate).toLocaleDateString()}
-                        </p>
-                        {/* Budget Information */}
-                        <div className="mt-2 p-2 bg-blue-50 rounded-md">
-                          <p className="text-sm font-medium text-blue-800">Budget Information</p>
-                          {event.proposedBudget && (
-                            <p className="text-sm text-blue-700">
-                              User Proposed: ${event.proposedBudget}
-                            </p>
-                          )}
-                          {event.adminProposedBudget && (
-                            <p className="text-sm text-blue-700">
-                              Admin Proposed: ${event.adminProposedBudget}
-                            </p>
-                          )}
-                          {event.finalBudget && (
-                            <p className="text-sm text-green-700 font-medium">
-                              Final Budget: ${event.finalBudget}
-                            </p>
-                          )}
-                          <p className="text-xs text-blue-600">
-                            Status: {event.budgetStatus.charAt(0).toUpperCase() + event.budgetStatus.slice(1)}
-                          </p>
-                          {event.budgetNegotiationHistory && event.budgetNegotiationHistory.length > 0 && (
-                            <div className="mt-2">
-                              <p className="text-sm font-medium text-blue-800">Negotiation History:</p>
-                              <div className="max-h-32 overflow-y-auto space-y-1">
-                                {event.budgetNegotiationHistory.map((item, index) => (
-                                  <div key={index} className="text-xs bg-white p-2 rounded border">
-                                    <div className="flex justify-between items-start">
-                                      <span className={`font-medium ${item.proposer === 'admin' ? 'text-red-600' : 'text-green-600'}`}>
-                                        {item.proposer === 'admin' ? 'Admin' : 'User'}:
-                                      </span>
-                                      <span className="text-gray-500">
-                                        {new Date(item.timestamp).toLocaleString()}
-                                      </span>
-                                    </div>
-                                    <p className="text-gray-800">Amount: ${item.amount}</p>
-                                    {item.message && (
-                                      <p className="text-gray-600 italic">"{item.message}"</p>
-                                    )}
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex gap-2 ml-4">
-                        {event.status === 'pending' && event.budgetStatus === 'pending' && (
-                          <button
-                            onClick={() => {
-                              setSelectedEventForBudget(event);
-                              setBudgetProposalData({ proposedBudget: '', message: '' });
-                              setShowBudgetModal(true);
-                            }}
-                            className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
-                          >
-                            Propose Budget
-                          </button>
-                        )}
-                        {event.status === 'pending' && event.budgetStatus === 'accepted' && (
-                          <button
-                            onClick={() => handleApproveEvent(event._id)}
-                            className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
-                          >
-                            Approve Event
-                          </button>
-                        )}
-                        <button
-                          onClick={() => handleDeclineEvent(event._id)}
-                          className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors"
-                        >
-                          Decline
-                        </button>
-                        <button
-                          onClick={() => handleDeleteEvent(event._id)}
-                          className="px-4 py-2 bg-gray-600 text-white rounded-lg text-sm font-medium hover:bg-gray-700 transition-colors flex items-center gap-1"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                          Delete
-                        </button>
-                      </div>
-                    </div>
-                    {event.description && (
-                      <p className="text-sm text-gray-700 mb-2">{event.description}</p>
-                    )}
-                    {event.adminNotes && (
-                      <p className="text-sm text-blue-700 mb-2">
-                        <strong>Admin Notes:</strong> {event.adminNotes}
-                      </p>
-                    )}
-                    <div className="text-xs text-gray-500">
-                      Created: {new Date(event.createdAt).toLocaleDateString()}
-                    </div>
-                  </div>
-                ))}
+                        </td>
+                        <td className="py-3">
+                          <div className="flex items-center gap-2">
+                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                              event.budgetStatus === 'accepted' ? 'bg-green-100 text-green-800' :
+                              event.budgetStatus === 'rejected' ? 'bg-red-100 text-red-800' :
+                              event.budgetStatus === 'negotiating' ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                              {event.budgetStatus.charAt(0).toUpperCase() + event.budgetStatus.slice(1)}
+                            </span>
+                            {event.finalBudget && (
+                              <span className="text-xs font-semibold text-purple-600">
+                                ${event.finalBudget.toLocaleString()}
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-3">
+                          <div className="text-xs text-gray-600">
+                            {new Date(event.startDate).toLocaleDateString()}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            to {new Date(event.endDate).toLocaleDateString()}
+                          </div>
+                        </td>
+                        <td className="py-3">
+                          <div className="flex gap-2 flex-wrap">
+                            {(event.budgetStatus === 'pending' || event.budgetStatus === 'negotiating') && (
+                              <button
+                                onClick={() => {
+                                  setSelectedEventForBudget(event);
+                                  setBudgetProposalData({
+                                    proposedBudget: event.adminProposedBudget?.toString() || '',
+                                    message: ''
+                                  });
+                                  setShowBudgetModal(true);
+                                }}
+                                className="px-3 py-1 bg-blue-600 text-white rounded text-xs font-medium hover:bg-blue-700 transition-colors flex items-center gap-1"
+                                title={event.budgetStatus === 'pending' ? 'Propose Budget' : 'View Chat'}
+                              >
+                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                                </svg>
+                                {event.budgetStatus === 'pending' ? 'Propose' : 'Chat'}
+                              </button>
+                            )}
+                            {event.status === 'pending' && event.budgetStatus === 'accepted' && (
+                              <button
+                                onClick={() => handleApproveEvent(event._id)}
+                                className="px-3 py-1 bg-green-600 text-white rounded text-xs font-medium hover:bg-green-700 transition-colors"
+                              >
+                                Approve
+                              </button>
+                            )}
+                            <button
+                              onClick={() => handleDeclineEvent(event._id)}
+                              className="px-3 py-1 bg-red-600 text-white rounded text-xs font-medium hover:bg-red-700 transition-colors"
+                            >
+                              Decline
+                            </button>
+                            <button
+                              onClick={() => handleDeleteEvent(event._id)}
+                              className="px-3 py-1 bg-gray-600 text-white rounded text-xs font-medium hover:bg-gray-700 transition-colors flex items-center gap-1"
+                              title="Delete Event"
+                            >
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
           </div>
@@ -723,75 +720,247 @@ export default function AdminDashboardPage() {
         </div>
       )}
 
-      {/* Budget Proposal Modal */}
+      {/* Budget Conversation Modal */}
       {showBudgetModal && selectedEventForBudget && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <h3 className="text-lg font-semibold mb-4">Propose Budget for Event</h3>
-            <p className="text-sm text-gray-600 mb-4">
-              Event: {selectedEventForBudget.title}
-            </p>
-            {selectedEventForBudget.proposedBudget && (
-              <p className="text-sm text-blue-600 mb-4">
-                User proposed budget: ${selectedEventForBudget.proposedBudget}
-              </p>
-            )}
-            
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Proposed Budget ($)
-                </label>
-                <input
-                  type="number"
-                  value={budgetProposalData.proposedBudget}
-                  onChange={(e) => setBudgetProposalData(prev => ({ ...prev, proposedBudget: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Enter proposed budget"
-                  step="0.01"
-                  required
-                />
+        <>
+          {/* Backdrop */}
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
+              {/* Modal Header */}
+              <div className="flex items-center justify-between p-6 border-b border-gray-200">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                    <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-800">Budget Conversation</h3>
+                    <p className="text-sm text-gray-600">{selectedEventForBudget.title}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className={`px-3 py-1 text-sm font-medium rounded-full ${
+                    selectedEventForBudget.budgetStatus === 'accepted' ? 'bg-green-100 text-green-800' :
+                    selectedEventForBudget.budgetStatus === 'rejected' ? 'bg-red-100 text-red-800' :
+                    selectedEventForBudget.budgetStatus === 'negotiating' ? 'bg-yellow-100 text-yellow-800' :
+                    'bg-gray-100 text-gray-800'
+                  }`}>
+                    {selectedEventForBudget.budgetStatus ? selectedEventForBudget.budgetStatus.charAt(0).toUpperCase() + selectedEventForBudget.budgetStatus.slice(1) : 'Unknown'}
+                  </span>
+                  <button
+                    onClick={() => setShowBudgetModal(false)}
+                    className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                  >
+                    <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
               </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Message (Optional)
-                </label>
-                <textarea
-                  value={budgetProposalData.message}
-                  onChange={(e) => setBudgetProposalData(prev => ({ ...prev, message: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Add a message explaining the budget proposal..."
-                  rows={3}
-                />
+
+              {/* Modal Body */}
+              <div className="p-6">
+                {/* Messaging Interface */}
+                <div className="bg-gray-50 rounded-lg p-4 min-h-[300px] max-h-[400px] overflow-y-auto">
+                  <div className="space-y-4">
+                    {/* Initial User Proposal */}
+                    {selectedEventForBudget.proposedBudget && (
+                      <div className="flex items-start gap-3">
+                        <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
+                          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                          </svg>
+                        </div>
+                        <div className="flex-1">
+                          <div className="bg-green-100 rounded-2xl rounded-tl-md px-4 py-3 max-w-md">
+                            <div className="text-sm text-green-600 font-medium mb-2">User Initial Proposal</div>
+                            <div className="text-xl font-bold text-green-800">${selectedEventForBudget.proposedBudget.toLocaleString()}</div>
+                          </div>
+                          <div className="text-xs text-gray-500 mt-1 ml-2">Event creation</div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Admin Counter */}
+                    {selectedEventForBudget.adminProposedBudget && (
+                      <div className="flex items-start gap-3 flex-row-reverse">
+                        <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center flex-shrink-0">
+                          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                          </svg>
+                        </div>
+                        <div className="flex-1 flex justify-end">
+                          <div className="bg-red-100 rounded-2xl rounded-tr-md px-4 py-3 max-w-md">
+                            <div className="text-sm text-red-600 font-medium mb-2">Your Counter-Proposal</div>
+                            <div className="text-xl font-bold text-red-800">${selectedEventForBudget.adminProposedBudget.toLocaleString()}</div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Final Budget */}
+                    {selectedEventForBudget.finalBudget && (
+                      <div className="flex items-start gap-3 flex-row-reverse">
+                        <div className="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center flex-shrink-0">
+                          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        </div>
+                        <div className="flex-1 flex justify-end">
+                          <div className="bg-purple-100 rounded-2xl rounded-tr-md px-4 py-3 max-w-md">
+                            <div className="text-sm text-purple-600 font-medium mb-2">Final Agreement</div>
+                            <div className="text-xl font-bold text-purple-800">${selectedEventForBudget.finalBudget.toLocaleString()}</div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Negotiation History */}
+                    {selectedEventForBudget.budgetNegotiationHistory && selectedEventForBudget.budgetNegotiationHistory.length > 0 && (
+                      <>
+                        {selectedEventForBudget.budgetNegotiationHistory
+                          .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+                          .map((item, index) => (
+                          <div key={index} className={`flex items-start gap-3 ${item.proposer === 'admin' ? 'flex-row-reverse' : ''}`}>
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                              item.proposer === 'admin' ? 'bg-red-500' : 'bg-green-500'
+                            }`}>
+                              {item.proposer === 'admin' ? (
+                                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                                </svg>
+                              ) : (
+                                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                </svg>
+                              )}
+                            </div>
+                            <div className={`flex-1 ${item.proposer === 'admin' ? 'flex justify-end' : ''}`}>
+                              <div className={`rounded-2xl px-4 py-3 max-w-md ${
+                                item.proposer === 'admin'
+                                  ? 'bg-red-100 rounded-tr-md'
+                                  : 'bg-green-100 rounded-tl-md'
+                              }`}>
+                                <div className={`text-sm font-medium mb-2 ${
+                                  item.proposer === 'admin' ? 'text-red-600' : 'text-green-600'
+                                }`}>
+                                  {item.proposer === 'admin' ? 'Your Counter-Proposal' : 'User Counter-Proposal'}
+                                </div>
+                                <div className={`text-xl font-bold ${
+                                  item.proposer === 'admin' ? 'text-red-800' : 'text-green-800'
+                                }`}>
+                                  ${item.amount.toLocaleString()}
+                                </div>
+                                {item.message && (
+                                  <div className={`text-sm mt-3 p-3 rounded-lg ${
+                                    item.proposer === 'admin' ? 'bg-red-200' : 'bg-green-200'
+                                  }`}>
+                                    "{item.message}"
+                                  </div>
+                                )}
+                              </div>
+                              <div className={`text-xs text-gray-500 mt-1 ${
+                                item.proposer === 'admin' ? 'text-right mr-2' : 'ml-2'
+                              }`}>
+                                {new Date(item.timestamp).toLocaleDateString()} {new Date(item.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                {selectedEventForBudget.budgetStatus === 'pending' && (
+                  <div className="flex gap-3 mt-6 pt-4 border-t border-gray-200">
+                    <div className="flex-1 space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Propose Budget ($)
+                        </label>
+                        <input
+                          type="number"
+                          value={budgetProposalData.proposedBudget}
+                          onChange={(e) => setBudgetProposalData(prev => ({ ...prev, proposedBudget: e.target.value }))}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          placeholder="Enter proposed budget"
+                          step="0.01"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Message (Optional)
+                        </label>
+                        <textarea
+                          value={budgetProposalData.message}
+                          onChange={(e) => setBudgetProposalData(prev => ({ ...prev, message: e.target.value }))}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          placeholder="Add a message explaining the budget proposal..."
+                          rows={2}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex gap-3 mt-6 pt-4 border-t border-gray-200">
+                  <button
+                    onClick={() => setShowBudgetModal(false)}
+                    className="flex-1 px-4 py-3 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+                  >
+                    Cancel
+                  </button>
+                  {(selectedEventForBudget.budgetStatus === 'pending' || selectedEventForBudget.budgetStatus === 'negotiating') && (
+                    <button
+                      onClick={async () => {
+                        if (!budgetProposalData.proposedBudget) return;
+
+                        await handleProposeBudget(
+                          selectedEventForBudget._id,
+                          parseFloat(budgetProposalData.proposedBudget),
+                          budgetProposalData.message || undefined
+                        );
+                        setShowBudgetModal(false);
+                      }}
+                      className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center justify-center gap-2"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                      </svg>
+                      {selectedEventForBudget.adminProposedBudget ? 'Update Proposal' : 'Send Proposal'}
+                    </button>
+                  )}
+                  {selectedEventForBudget.budgetStatus === 'negotiating' && (
+                    <div className="flex gap-2 flex-1">
+                      <button
+                        onClick={() => handleApproveEvent(selectedEventForBudget._id)}
+                        className="flex-1 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium flex items-center justify-center gap-2"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        Approve Event
+                      </button>
+                      <button
+                        onClick={() => handleDeclineEvent(selectedEventForBudget._id)}
+                        className="flex-1 px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium flex items-center justify-center gap-2"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                        Decline Event
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-            
-            <div className="flex gap-3 mt-6">
-              <button
-                onClick={() => setShowBudgetModal(false)}
-                className="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={async () => {
-                  if (!budgetProposalData.proposedBudget) return;
-                  
-                  await handleProposeBudget(
-                    selectedEventForBudget._id,
-                    parseFloat(budgetProposalData.proposedBudget),
-                    budgetProposalData.message || undefined
-                  );
-                  setShowBudgetModal(false);
-                }}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                Send Proposal
-              </button>
             </div>
           </div>
-        </div>
+        </>
       )}
     </section>
     </main>

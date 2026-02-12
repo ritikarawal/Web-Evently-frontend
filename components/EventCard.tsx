@@ -1,3 +1,7 @@
+"use client";
+
+import { useState } from "react";
+
 interface EventCardProps {
   event: {
     _id: string;
@@ -17,6 +21,13 @@ interface EventCardProps {
     adminProposedBudget?: number;
     finalBudget?: number;
     budgetStatus?: 'pending' | 'negotiating' | 'accepted' | 'rejected';
+    budgetNegotiationHistory?: Array<{
+      proposer: 'user' | 'admin';
+      proposerId?: string;
+      amount: number;
+      message?: string;
+      timestamp: string;
+    }>;
     status?: 'draft' | 'published' | 'cancelled' | 'pending' | 'approved' | 'declined';
   };
   showActions?: boolean;
@@ -42,6 +53,8 @@ export default function EventCard({
   isLoggedIn = false,
   isOrganizer = false
 }: EventCardProps) {
+  const [showBudgetModal, setShowBudgetModal] = useState(false);
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -57,6 +70,213 @@ export default function EventCard({
   );
   const availableSeats = event.capacity ? event.capacity - (event.attendees?.length || 0) : null;
   const isFull = availableSeats !== null && availableSeats <= 0;
+
+  // Budget Conversation Modal
+  if (showBudgetModal) {
+    return (
+      <>
+        {/* Backdrop */}
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                  <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-800">Budget Conversation</h3>
+                  <p className="text-sm text-gray-600">{event.title}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className={`px-3 py-1 text-sm font-medium rounded-full ${
+                  event.budgetStatus === 'accepted' ? 'bg-green-100 text-green-800' :
+                  event.budgetStatus === 'rejected' ? 'bg-red-100 text-red-800' :
+                  event.budgetStatus === 'negotiating' ? 'bg-yellow-100 text-yellow-800' :
+                  'bg-gray-100 text-gray-800'
+                }`}>
+                  {event.budgetStatus ? event.budgetStatus.charAt(0).toUpperCase() + event.budgetStatus.slice(1) : 'Unknown'}
+                </span>
+                <button
+                  onClick={() => setShowBudgetModal(false)}
+                  className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                >
+                  <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6">
+              {/* Messaging Interface */}
+              <div className="bg-gray-50 rounded-lg p-4 min-h-[300px] max-h-[400px] overflow-y-auto">
+                <div className="space-y-4">
+                  {/* Initial User Proposal */}
+                  {event.proposedBudget && (
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
+                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                      </div>
+                      <div className="flex-1">
+                        <div className="bg-green-100 rounded-2xl rounded-tl-md px-4 py-3 max-w-md">
+                          <div className="text-sm text-green-600 font-medium mb-2">Your Initial Proposal</div>
+                          <div className="text-xl font-bold text-green-800">${event.proposedBudget.toLocaleString()}</div>
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1 ml-2">Event creation</div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Admin Counter */}
+                  {event.adminProposedBudget && (
+                    <div className="flex items-start gap-3 flex-row-reverse">
+                      <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center flex-shrink-0">
+                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                        </svg>
+                      </div>
+                      <div className="flex-1 flex justify-end">
+                        <div className="bg-red-100 rounded-2xl rounded-tr-md px-4 py-3 max-w-md">
+                          <div className="text-sm text-red-600 font-medium mb-2">Admin Counter-Proposal</div>
+                          <div className="text-xl font-bold text-red-800">${event.adminProposedBudget.toLocaleString()}</div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Final Budget */}
+                  {event.finalBudget && (
+                    <div className="flex items-start gap-3 flex-row-reverse">
+                      <div className="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center flex-shrink-0">
+                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </div>
+                      <div className="flex-1 flex justify-end">
+                        <div className="bg-purple-100 rounded-2xl rounded-tr-md px-4 py-3 max-w-md">
+                          <div className="text-sm text-purple-600 font-medium mb-2">Final Agreement</div>
+                          <div className="text-xl font-bold text-purple-800">${event.finalBudget.toLocaleString()}</div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Negotiation History */}
+                  {event.budgetNegotiationHistory && event.budgetNegotiationHistory.length > 0 && (
+                    <>
+                      {event.budgetNegotiationHistory
+                        .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+                        .map((item, index) => (
+                        <div key={index} className={`flex items-start gap-3 ${item.proposer === 'admin' ? 'flex-row-reverse' : ''}`}>
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                            item.proposer === 'admin' ? 'bg-red-500' : 'bg-green-500'
+                          }`}>
+                            {item.proposer === 'admin' ? (
+                              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                              </svg>
+                            ) : (
+                              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                              </svg>
+                            )}
+                          </div>
+                          <div className={`flex-1 ${item.proposer === 'admin' ? 'flex justify-end' : ''}`}>
+                            <div className={`rounded-2xl px-4 py-3 max-w-md ${
+                              item.proposer === 'admin'
+                                ? 'bg-red-100 rounded-tr-md'
+                                : 'bg-green-100 rounded-tl-md'
+                            }`}>
+                              <div className={`text-sm font-medium mb-2 ${
+                                item.proposer === 'admin' ? 'text-red-600' : 'text-green-600'
+                              }`}>
+                                {item.proposer === 'admin' ? 'Admin Counter-Proposal' : 'Your Counter-Proposal'}
+                              </div>
+                              <div className={`text-xl font-bold ${
+                                item.proposer === 'admin' ? 'text-red-800' : 'text-green-800'
+                              }`}>
+                                ${item.amount.toLocaleString()}
+                              </div>
+                              {item.message && (
+                                <div className={`text-sm mt-3 p-3 rounded-lg ${
+                                  item.proposer === 'admin' ? 'bg-red-200' : 'bg-green-200'
+                                }`}>
+                                  "{item.message}"
+                                </div>
+                              )}
+                            </div>
+                            <div className={`text-xs text-gray-500 mt-1 ${
+                              item.proposer === 'admin' ? 'text-right mr-2' : 'ml-2'
+                            }`}>
+                              {new Date(item.timestamp).toLocaleDateString()} {new Date(item.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              {event.adminProposedBudget && event.budgetStatus === 'negotiating' && (
+                <div className="flex gap-3 mt-6 pt-4 border-t border-gray-200">
+                  <button
+                    onClick={() => onBudgetResponse?.(event._id, true)}
+                    className="flex-1 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium flex items-center justify-center gap-2"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    Accept Proposal
+                  </button>
+                  <button
+                    onClick={() => {
+                      const counterProposal = prompt('Enter your counter-proposal amount:');
+                      if (counterProposal) {
+                        const amount = parseFloat(counterProposal);
+                        if (!isNaN(amount) && amount > 0) {
+                          const message = prompt('Add a message (optional):');
+                          onBudgetResponse?.(event._id, false, amount, message || undefined);
+                          setShowBudgetModal(false);
+                        }
+                      }
+                    }}
+                    className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center justify-center gap-2"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                    </svg>
+                    Counter-Propose
+                  </button>
+                  <button
+                    onClick={() => {
+                      const message = prompt('Reason for rejection (optional):');
+                      onBudgetResponse?.(event._id, false, undefined, message || undefined);
+                      setShowBudgetModal(false);
+                    }}
+                    className="flex-1 px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium flex items-center justify-center gap-2"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                    Reject
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  }
 
   return (
     <div className="bg-white rounded-[25px] shadow-xl hover:shadow-2xl transition-all duration-300 p-8 hover:scale-[1.02] border border-white/50 group">
@@ -146,67 +366,34 @@ export default function EventCard({
           </div>
         )}
 
-        {/* Budget Information for Organizers */}
+        {/* Budget Icon for Organizers */}
         {isOrganizer && (event.proposedBudget || event.adminProposedBudget || event.finalBudget) && (
-          <div className="mt-4 p-4 bg-blue-50 rounded-xl border border-blue-200">
-            <h4 className="font-semibold text-blue-800 mb-2 flex items-center gap-2">
-              <span className="text-lg">💼</span>
-              Budget Information
-            </h4>
-            <div className="space-y-1 text-sm">
-              {event.proposedBudget && (
-                <p className="text-blue-700">
-                  <span className="font-medium">Your Proposal:</span> ${event.proposedBudget}
+          <div className="mt-4 flex items-center justify-between p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-blue-800">Budget Conversation</p>
+                <p className="text-xs text-blue-600">
+                  {event.budgetStatus ? event.budgetStatus.charAt(0).toUpperCase() + event.budgetStatus.slice(1) : 'Unknown'} • 
+                  {event.finalBudget ? `Final: $${event.finalBudget.toLocaleString()}` : 
+                   event.adminProposedBudget ? `Admin: $${event.adminProposedBudget.toLocaleString()}` :
+                   event.proposedBudget ? `Your: $${event.proposedBudget.toLocaleString()}` : 'No proposals yet'}
                 </p>
-              )}
-              {event.adminProposedBudget && event.budgetStatus === 'negotiating' && (
-                <div className="mt-3 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
-                  <p className="text-yellow-800 font-medium mb-2">
-                    Admin Proposed: ${event.adminProposedBudget}
-                  </p>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => onBudgetResponse?.(event._id, true)}
-                      className="px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 transition-colors"
-                    >
-                      Accept
-                    </button>
-                    <button
-                      onClick={() => {
-                        const counterProposal = prompt('Enter your counter-proposal amount:');
-                        if (counterProposal) {
-                          const amount = parseFloat(counterProposal);
-                          if (!isNaN(amount) && amount > 0) {
-                            const message = prompt('Add a message (optional):');
-                            onBudgetResponse?.(event._id, false, amount, message || undefined);
-                          }
-                        }
-                      }}
-                      className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors"
-                    >
-                      Counter
-                    </button>
-                    <button
-                      onClick={() => {
-                        const message = prompt('Reason for rejection (optional):');
-                        onBudgetResponse?.(event._id, false, undefined, message || undefined);
-                      }}
-                      className="px-3 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors"
-                    >
-                      Reject
-                    </button>
-                  </div>
-                </div>
-              )}
-              {event.finalBudget && (
-                <p className="text-green-700 font-medium">
-                  Final Budget: ${event.finalBudget}
-                </p>
-              )}
-              <p className="text-xs text-blue-600 mt-1">
-                Status: {event.budgetStatus ? event.budgetStatus.charAt(0).toUpperCase() + event.budgetStatus.slice(1) : 'Unknown'}
-              </p>
+              </div>
             </div>
+            <button
+              onClick={() => setShowBudgetModal(true)}
+              className="px-3 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center gap-1"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+              </svg>
+              View Chat
+            </button>
           </div>
         )}
       </div>
