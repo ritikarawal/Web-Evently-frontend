@@ -49,6 +49,15 @@ export const deleteEvent = async (eventId: string) => {
   }
 };
 
+export const acceptUserBudgetProposal = async (eventId: string) => {
+  try {
+    const response = await axios.put(`/api/admin/events/${eventId}/accept-user-budget`);
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.message || "Failed to accept user's budget proposal");
+  }
+};
+
 export const proposeBudget = async (eventId: string, data: {
   proposedBudget: number;
   message?: string;
