@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const publicRoutes = ["/", "/features", "/pricing", "/about", "/login", "/register"];
-const adminRoutes = ["/admin"];
+const adminRoutes = ["/admin", "/admin/dashboard"];
 const protectedRoutes = ["/home", "/profile", "/events", ...adminRoutes, "/user"];
 
 const isRouteMatch = (pathname: string, route: string) => {
@@ -36,11 +36,12 @@ export function proxy(request: NextRequest) {
   }
 
   if (token && user) {
-    if (user.role === "admin" && isHomeRoute) {
-      return NextResponse.redirect(new URL("/admin/dashboard", request.url));
-    }
     if (isAdminRoute && user.role !== "admin") {
       return NextResponse.redirect(new URL("/home", request.url));
+    }
+    if (pathname === "/") {
+      const dashboardUrl = user.role === "admin" ? "/admin/dashboard" : "/home";
+      return NextResponse.redirect(new URL(dashboardUrl, request.url));
     }
   }
 

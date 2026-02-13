@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from 'react-toastify';
 import { logout } from "@/lib/api/auth";
+import { clearAuthCookiesClient } from "@/lib/client-cookie";
 import {
   AdminUserPayload,
   createUser,
@@ -110,6 +111,7 @@ export default function AdminDashboardPage() {
 
   const handleLogout = () => {
     logout();
+    clearAuthCookiesClient();
     router.push("/login");
   };
 
@@ -134,6 +136,27 @@ export default function AdminDashboardPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    const token = document.cookie.split('; ').find(row => row.startsWith('auth_token='))?.split('=')[1];
+    const userDataStr = document.cookie.split('; ').find(row => row.startsWith('user_data='))?.split('=')[1];
+    if (!token) {
+      clearAuthCookiesClient();
+      router.push('/auth/login');
+      return;
+    }
+    let user;
+    try {
+      user = userDataStr ? JSON.parse(decodeURIComponent(userDataStr)) : null;
+    } catch {
+      user = null;
+    }
+    if (!user || user.role !== 'admin') {
+      clearAuthCookiesClient();
+      router.push('/home');
+      return;
+    }
+  }, [router]);
 
   useEffect(() => {
     loadUsers(1);
