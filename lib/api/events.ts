@@ -9,6 +9,7 @@ export interface CreateEventData {
   category: string;
   capacity?: number;
   ticketPrice?: number;
+  proposedBudget: number;
   isPublic: boolean;
   duration?: string;
   notes?: string;
@@ -56,5 +57,55 @@ export const deleteEvent = async (eventId: string) => {
     return response.data;
   } catch (error: any) {
     throw new Error(error.response?.data?.message || "Failed to delete event");
+  }
+};
+
+export const joinEvent = async (eventId: string) => {
+  try {
+    const response = await axios.post(`/api/events/${eventId}/join`);
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.message || "Failed to join event");
+  }
+};
+
+export const leaveEvent = async (eventId: string) => {
+  try {
+    const response = await axios.post(`/api/events/${eventId}/leave`);
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.message || "Failed to leave event");
+  }
+};
+
+export const getEventById = async (eventId: string) => {
+  try {
+    const response = await axios.get(`/api/events/${eventId}`);
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.message || "Failed to fetch event");
+  }
+};
+
+// Budget negotiation APIs
+export const respondToBudgetProposal = async (eventId: string, data: {
+  accepted: boolean;
+  counterProposal?: number;
+  message?: string;
+}) => {
+  try {
+    const response = await axios.put(`/api/events/${eventId}/budget-response`, data);
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.message || "Failed to respond to budget proposal");
+  }
+};
+
+export const getBudgetNegotiationHistory = async (eventId: string) => {
+  try {
+    const response = await axios.get(`/api/events/${eventId}/budget-history`);
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.message || "Failed to fetch budget history");
   }
 };

@@ -15,7 +15,8 @@ export default function CreateEventForm({ onCreate, onCancel }: CreateEventFormP
         location: '',
         category: '',
         capacity: '',
-        ticketPrice: ''
+        ticketPrice: '',
+        proposedBudget: ''
     });
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -58,14 +59,19 @@ export default function CreateEventForm({ onCreate, onCancel }: CreateEventFormP
                             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                         >
                             <option value="">Select category</option>
+                            <option value="birthday">Birthday</option>
+                            <option value="anniversary">Anniversary</option>
+                            <option value="wedding">Wedding</option>
+                            <option value="engagement">Engagement</option>
+                            <option value="workshop">Workshop</option>
+                            <option value="conference">Conference</option>
+                            <option value="graduation">Graduation</option>
+                            <option value="fundraisers">Fundraisers</option>
                             <option value="music">Music</option>
                             <option value="sports">Sports</option>
                             <option value="education">Education</option>
                             <option value="business">Business</option>
                             <option value="entertainment">Entertainment</option>
-                            <option value="birthday">Birthday</option>
-                            <option value="graduation">Graduation</option>
-                            <option value="anniversary">Anniversary</option>
                             <option value="other">Other</option>
                         </select>
                     </div>
@@ -134,6 +140,21 @@ export default function CreateEventForm({ onCreate, onCancel }: CreateEventFormP
                             placeholder="0.00"
                         />
                     </div>
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Proposed Budget ($)</label>
+                    <input
+                        type="number"
+                        name="proposedBudget"
+                        required
+                        value={formData.proposedBudget}
+                        onChange={handleChange}
+                        step="0.01"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                        placeholder="Enter your proposed budget for this event"
+                    />
+                    <p className="text-sm text-gray-500 mt-1">This budget will be reviewed and approved by an admin before the event can proceed to payment.</p>
                 </div>
 
                 <div className="flex space-x-4">

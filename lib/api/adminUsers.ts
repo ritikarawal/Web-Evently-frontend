@@ -14,9 +14,11 @@ export interface AdminUserPayload {
   image?: File | null;
 }
 
-export const getAllUsers = async () => {
+export const getAllUsers = async (page: number = 1, limit: number = 10) => {
   try {
-    const response = await axios.get(API.ADMIN.USERS);
+    const response = await axios.get(API.ADMIN.USERS, {
+      params: { page, limit }
+    });
     console.log('getAllUsers API response:', response);
     return response.data;
   } catch (error) {

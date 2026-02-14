@@ -8,14 +8,15 @@ import { useNotifications } from "@/contexts/NotificationContext";
 
 interface NavigationBarProps {
   profilePicture: string | null;
+  isAdmin?: boolean;
 }
 
-export default function NavigationBar({ profilePicture }: NavigationBarProps) {
+export default function NavigationBar({ profilePicture, isAdmin = false }: NavigationBarProps) {
   const router = useRouter();
   const { unreadCount, refreshNotifications } = useNotifications();
 
   return (
-    <header className="bg-gradient-to-r from-[#db8585] to-[#c76b6b] shadow-xl">
+    <header className="bg-gradient-to-r from-[var(--primary)] to-[var(--primary-light)] shadow-xl">
       <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
         {/* Logo */}
         <div className="flex items-center">
@@ -33,15 +34,15 @@ export default function NavigationBar({ profilePicture }: NavigationBarProps) {
         {/* Search Bar */}
         <div className="flex-1 max-w-md mx-8">
           <div className="relative">
-            <button className="absolute left-3 top-1/2 -translate-y-1/2 px-3 py-1 bg-white/90 backdrop-blur-sm border-r border-[#db8585]/30 rounded-l-lg text-sm text-[#49516f] font-medium hover:bg-white transition-colors duration-300">
+            <button className="absolute left-3 top-1/2 -translate-y-1/2 px-3 py-1 bg-white/90 backdrop-blur-sm border-r border-[var(--primary)]/30 rounded-l-lg text-sm text-[var(--text-secondary)] font-medium hover:bg-white transition-colors duration-300">
               🏷️ Category
             </button>
             <input
               type="text"
               placeholder="Search events..."
-              className="w-full pl-32 pr-12 py-3 rounded-xl border border-white/30 bg-white/90 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-white/50 text-[#49516f] placeholder-[#49516f]/60 transition-all duration-300"
+              className="w-full pl-32 pr-12 py-3 rounded-xl border border-white/30 bg-white/90 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-white/50 text-[var(--text-secondary)] placeholder-[var(--text-secondary)]/60 transition-all duration-300"
             />
-            <button className="absolute right-2 top-1/2 -translate-y-1/2 bg-gradient-to-r from-[#800020] to-[#600018] text-white p-2 rounded-lg hover:from-[#600018] hover:to-[#400010] transition-all duration-300 hover:scale-110 shadow-md">
+            <button className="absolute right-2 top-1/2 -translate-y-1/2 bg-gradient-to-r from-[var(--primary)] to-[var(--primary-light)] text-white p-2 rounded-lg hover:from-[var(--primary-light)] hover:to-[var(--primary)] transition-all duration-300 hover:scale-110 shadow-md">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
@@ -90,21 +91,26 @@ export default function NavigationBar({ profilePicture }: NavigationBarProps) {
       </div>
 
       {/* Navigation Tabs */}
-      <nav className="bg-gradient-to-r from-[#ffe4e1] to-[#fff5f5] shadow-sm">
+      <nav className="bg-gradient-to-r from-[var(--primary-light)] to-[var(--surface)] shadow-sm">
         <div className="max-w-7xl mx-auto px-6">
-          <div className="flex gap-8 border-b border-[#db8585]/20">
-            <Link href="/home" className="px-4 py-4 font-semibold text-black border-b-2 border-[#db8585] bg-[#db8585]/10 rounded-t-lg transition-all duration-300">
+          <div className="flex gap-8 border-b border-[var(--primary)]/20">
+            <Link href="/home" className="px-4 py-4 font-semibold text-black border-b-2 border-[var(--primary)] bg-[var(--primary)]/10 rounded-t-lg transition-all duration-300">
               🏠 Events
             </Link>
-            <Link href="/my-events" className="px-4 py-4 font-medium text-[#49516f] hover:text-black hover:bg-[#db8585]/5 rounded-t-lg transition-all duration-300">
+            <Link href="/my-events" className="px-4 py-4 font-medium text-[var(--text-secondary)] hover:text-black hover:bg-[var(--primary)]/5 rounded-t-lg transition-all duration-300">
               📅 My Events
             </Link>
-            <Link href="/notifications" className="px-4 py-4 font-medium text-[#49516f] hover:text-black hover:bg-[#db8585]/5 rounded-t-lg transition-all duration-300">
+            <Link href="/notifications" className="px-4 py-4 font-medium text-[var(--text-secondary)] hover:text-black hover:bg-[var(--primary)]/5 rounded-t-lg transition-all duration-300">
               🔔 Notifications
             </Link>
-            <Link href="/settings" className="px-4 py-4 font-medium text-[#49516f] hover:text-black hover:bg-[#db8585]/5 rounded-t-lg transition-all duration-300">
+            <Link href="/settings" className="px-4 py-4 font-medium text-[var(--text-secondary)] hover:text-black hover:bg-[var(--primary)]/5 rounded-t-lg transition-all duration-300">
               ⚙️ Settings
             </Link>
+            {isAdmin && (
+              <Link href="/admin/dashboard" className="px-4 py-4 font-medium text-[var(--text-secondary)] hover:text-black hover:bg-[var(--primary)]/5 rounded-t-lg transition-all duration-300">
+                🛡️ Admin
+              </Link>
+            )}
           </div>
         </div>
       </nav>

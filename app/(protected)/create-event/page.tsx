@@ -23,6 +23,9 @@ function CreateEventContent() {
   const [editEventId, setEditEventId] = useState<string | null>(null);
   const [eventTitle, setEventTitle] = useState('');
   const [selectedVenue, setSelectedVenue] = useState('');
+  const [isPublic, setIsPublic] = useState(true);
+  const [capacity, setCapacity] = useState<string>('');
+  const [proposedBudget, setProposedBudget] = useState<string>('');
 
   const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -45,16 +48,6 @@ function CreateEventContent() {
       { name: 'Party Palace Kathmandu', location: 'Thamel', rating: 4.8, price: '$$', capacity: '50-100' },
       { name: 'Celebration Hall', location: 'Lazimpat', rating: 4.6, price: '$$$', capacity: '100-150' },
       { name: 'Fun Zone Events', location: 'Durbarmarg', rating: 4.5, price: '$$', capacity: '30-80' }
-    ],
-    music: [ 
-      { name: 'Live Music Arena', location: 'Bouddha', rating: 4.7, price: '$$$', capacity: '500-1000' },
-      { name: 'Rock Valley', location: 'Jhamsikhel', rating: 4.5, price: '$$', capacity: '200-400' },
-      { name: 'Open Air Amphitheater', location: 'Patan', rating: 4.8, price: '$$$$', capacity: '1000+' }
-    ],
-    sports: [
-      { name: 'Stadium Complex', location: 'Dasharath Rangashala', rating: 4.7, price: '$$$$', capacity: '5000+' },
-      { name: 'Sports Arena', location: 'Satdobato', rating: 4.5, price: '$$', capacity: '500-1000' },
-      { name: 'Athletic Center', location: 'Lagankhel', rating: 4.6, price: '$$$', capacity: '200-500' }
     ],
     education: [
       { name: 'Academic Hall', location: 'Kirtipur', rating: 4.5, price: '$', capacity: '100-200' },
@@ -112,6 +105,8 @@ function CreateEventContent() {
         setEndDate(new Date(event.endDate));
         setDescription(event.description);
         setSelectedVenue(event.location || '');
+        setIsPublic(event.isPublic !== false); // Default to true if not specified
+        setCapacity(event.capacity ? event.capacity.toString() : '');
         localStorage.removeItem('editEvent');
       } catch (error) {
         console.error('Error parsing edit event data:', error);
@@ -195,7 +190,7 @@ function CreateEventContent() {
   const canProceedToNextStep = () => {
     switch (currentStep) {
       case 1:
-        return eventTitle.trim() !== '' && selectedCategory !== '';
+        return eventTitle.trim() !== '' && selectedCategory !== '' && proposedBudget !== '' && parseFloat(proposedBudget) > 0;
       case 2:
         return startDate !== null;
       case 3:
@@ -233,7 +228,10 @@ function CreateEventContent() {
         endDate: endDate ? endDate.toISOString() : startDate.toISOString(),
         location: selectedVenue || 'TBD',
         category: selectedCategory.toLowerCase(),
-        isPublic: true,
+        isPublic: isPublic,
+        capacity: capacity ? parseInt(capacity) : undefined,
+        proposedBudget: proposedBudget ? parseFloat(proposedBudget) : 0,
+        status: 'pending',
         duration: `${startTime} - ${endTime}`,
         notes: description,
       };
@@ -364,6 +362,85 @@ function CreateEventContent() {
                   rows={6}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all resize-none"
                 />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <Users className="w-4 h-4 inline mr-1" />
+                    Maximum Capacity (Optional)
+                  </label>
+                  <input
+                    type="number"
+                    value={capacity}
+                    onChange={(e) => setCapacity(e.target.value)}
+                    placeholder="e.g. 100"
+                    min="1"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                  />
+                  <p className="text-gray-500 text-xs mt-1">Leave empty for unlimited capacity</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    💰 Proposed Budget *
+                  </label>
+                  <input
+                    type="number"
+                    value={proposedBudget}
+                    onChange={(e) => setProposedBudget(e.target.value)}
+                    placeholder="e.g. 5000"
+                    min="0"
+                    step="0.01"
+                    required
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                  />
+                  <p className="text-gray-500 text-xs mt-1">Budget will be reviewed by admin before approval</p>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  Event Visibility *
+                </label>
+                <div className="space-y-3">
+                  <div className="flex items-center">
+                    <input
+                      type="radio"
+                      id="public"
+                      name="visibility"
+                      value="public"
+                      checked={isPublic}
+                      onChange={() => setIsPublic(true)}
+                      className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 focus:ring-2"
+                    />
+                    <label htmlFor="public" className="ml-3 text-sm font-medium text-gray-900">
+                      <div className="flex items-center">
+                        <Users className="w-4 h-4 mr-2 text-green-600" />
+                        Public Event
+                      </div>
+                      <p className="text-gray-600 text-xs mt-1">Anyone can discover and join this event</p>
+                    </label>
+                  </div>
+                  <div className="flex items-center">
+                    <input
+                      type="radio"
+                      id="private"
+                      name="visibility"
+                      value="private"
+                      checked={!isPublic}
+                      onChange={() => setIsPublic(false)}
+                      className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 focus:ring-2"
+                    />
+                    <label htmlFor="private" className="ml-3 text-sm font-medium text-gray-900">
+                      <div className="flex items-center">
+                        <Star className="w-4 h-4 mr-2 text-purple-600" />
+                        Private Event
+                      </div>
+                      <p className="text-gray-600 text-xs mt-1">Only invited guests can see this event</p>
+                    </label>
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -619,6 +696,36 @@ function CreateEventContent() {
                 <div className="bg-gray-50 rounded-lg p-4">
                   <h3 className="text-sm font-medium text-gray-500 mb-1">Venue</h3>
                   <p className="text-lg font-semibold text-gray-900">{selectedVenue}</p>
+                </div>
+
+                {capacity && (
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <h3 className="text-sm font-medium text-gray-500 mb-1">Capacity</h3>
+                    <div className="flex items-center">
+                      <Users className="w-5 h-5 mr-2 text-blue-600" />
+                      <p className="text-lg font-semibold text-blue-700">{capacity} people</p>
+                      <p className="text-sm text-gray-600 ml-2">Maximum attendees allowed</p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h3 className="text-sm font-medium text-gray-500 mb-1">Visibility</h3>
+                  <div className="flex items-center">
+                    {isPublic ? (
+                      <>
+                        <Users className="w-5 h-5 mr-2 text-green-600" />
+                        <p className="text-lg font-semibold text-green-700">Public Event</p>
+                        <p className="text-sm text-gray-600 ml-2">Anyone can discover and join</p>
+                      </>
+                    ) : (
+                      <>
+                        <Star className="w-5 h-5 mr-2 text-purple-600" />
+                        <p className="text-lg font-semibold text-purple-700">Private Event</p>
+                        <p className="text-sm text-gray-600 ml-2">Only invited guests can see</p>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
 
