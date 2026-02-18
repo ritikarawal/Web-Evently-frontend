@@ -222,6 +222,42 @@ export default function HomePage() {
     }
   ];
 
+  const recommendedVenues = {
+    birthday: [
+      { name: 'Party Palace Kathmandu', location: 'Thamel', rating: 4.8, price: '$$', capacity: '50-100' },
+      { name: 'Celebration Hall', location: 'Lazimpat', rating: 4.6, price: '$$$', capacity: '100-150' },
+      { name: 'Fun Zone Events', location: 'Durbarmarg', rating: 4.5, price: '$$', capacity: '30-80' }
+    ],
+    anniversary: [
+      { name: 'Romantic Garden Restaurant', location: 'Lazimpat', rating: 4.8, price: '$$$$', capacity: '20-50' },
+      { name: 'Anniversary Banquet Hall', location: 'Thamel', rating: 4.7, price: '$$$', capacity: '50-100' },
+      { name: 'Couples Retreat Center', location: 'Bouddha', rating: 4.6, price: '$$$', capacity: '30-80' }
+    ],
+    wedding: [
+      { name: 'Celebration Hall', location: 'Lazimpat', rating: 4.6, price: '$$$', capacity: '100-150' },
+      { name: 'Party Palace Kathmandu', location: 'Thamel', rating: 4.8, price: '$$', capacity: '50-100' }
+    ],
+    engagement: [
+      { name: 'Romantic Garden Restaurant', location: 'Lazimpat', rating: 4.8, price: '$$$$', capacity: '20-50' }
+    ],
+    workshop: [
+      { name: 'Academic Hall', location: 'Kirtipur', rating: 4.5, price: '$', capacity: '100-200' },
+      { name: 'Learning Hub', location: 'Putalisadak', rating: 4.6, price: '$$', capacity: '30-50' }
+    ],
+    conference: [
+      { name: 'Business Hub Kathmandu', location: 'Durbar Marg', rating: 4.7, price: '$$$', capacity: '100-200' },
+      { name: 'Executive Meeting Space', location: 'Baluwatar', rating: 4.8, price: '$$$$', capacity: '50-100' }
+    ],
+    graduation: [
+      { name: 'University Auditorium', location: 'Kirtipur', rating: 4.6, price: '$$', capacity: '300-500' },
+      { name: 'Graduation Hall', location: 'Pulchowk', rating: 4.7, price: '$$$', capacity: '200-400' }
+    ],
+    fundraisers: [
+      { name: 'Community Center', location: 'Kalanki', rating: 4.4, price: '$', capacity: '50-150' },
+      { name: 'Multi-purpose Venue', location: 'Chabahil', rating: 4.5, price: '$$', capacity: '100-200' }
+    ]
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
       {/* Header */}
@@ -330,16 +366,17 @@ export default function HomePage() {
 
           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-4">
             {eventCategories.map((category) => (
-              <Link
-                key={category.name}
-                href={`/create-event?category=${category.name.toLowerCase()}`}
-                className={`${category.bgColor} ${category.hoverColor} ${category.borderColor} border-2 rounded-xl p-4 flex flex-col items-center justify-center gap-2 shadow-sm hover:shadow-md transition-all duration-200 hover:scale-105 group cursor-pointer`}
-              >
-                <div className={`text-2xl group-hover:scale-110 transition-transform duration-200`}>
-                  <category.icon className={category.iconColor} />
-                </div>
-                <span className="text-xs font-medium text-gray-700 text-center">{category.name}</span>
-              </Link>
+              <div key={category.name} className="relative group">
+                <Link
+                  href={`/create-event?category=${category.name.toLowerCase()}`}
+                  className={`${category.bgColor} ${category.hoverColor} ${category.borderColor} border-2 rounded-xl p-4 flex flex-col items-center justify-center gap-2 shadow-sm hover:shadow-md transition-all duration-200 hover:scale-105 group cursor-pointer`}
+                >
+                  <div className={`text-2xl group-hover:scale-110 transition-transform duration-200`}>
+                    <category.icon className={category.iconColor} />
+                  </div>
+                  <span className="text-xs font-medium text-gray-700 text-center">{category.name}</span>
+                </Link>
+              </div>
             ))}
           </div>
         </div>

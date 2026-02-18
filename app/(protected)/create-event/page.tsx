@@ -78,6 +78,26 @@ function CreateEventContent() {
       { name: 'Community Center', location: 'Kalanki', rating: 4.4, price: '$', capacity: '50-150' },
       { name: 'Local Hall', location: 'Swayambhu', rating: 4.3, price: '$', capacity: '30-100' },
       { name: 'Multi-purpose Venue', location: 'Chabahil', rating: 4.5, price: '$$', capacity: '100-200' }
+    ],
+
+    workshop: [
+      { name: 'Academic Hall', location: 'Kirtipur', rating: 4.5, price: '$', capacity: '100-200' },
+      { name: 'Learning Hub', location: 'Putalisadak', rating: 4.6, price: '$$', capacity: '30-50' }
+    ],
+    conference: [
+      { name: 'Business Hub Kathmandu', location: 'Durbar Marg', rating: 4.7, price: '$$$', capacity: '100-200' },
+      { name: 'Executive Meeting Space', location: 'Baluwatar', rating: 4.8, price: '$$$$', capacity: '50-100' }
+    ],
+    engagement: [
+      { name: 'Romantic Garden Restaurant', location: 'Lazimpat', rating: 4.8, price: '$$$$', capacity: '20-50' }
+    ],
+    wedding: [
+      { name: 'Celebration Hall', location: 'Lazimpat', rating: 4.6, price: '$$$', capacity: '100-150' },
+      { name: 'Party Palace Kathmandu', location: 'Thamel', rating: 4.8, price: '$$', capacity: '50-100' }
+    ],
+    fundraisers: [
+      { name: 'Community Center', location: 'Kalanki', rating: 4.4, price: '$', capacity: '50-150' },
+      { name: 'Multi-purpose Venue', location: 'Chabahil', rating: 4.5, price: '$$', capacity: '100-200' }
     ]
   };
 
@@ -335,7 +355,7 @@ function CreateEventContent() {
                   value={eventTitle}
                   onChange={(e) => setEventTitle(e.target.value)}
                   placeholder="Enter your event name"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-lg"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-lg text-black placeholder-gray-400"
                 />
               </div>
 
@@ -347,7 +367,7 @@ function CreateEventContent() {
                   type="text"
                   value={selectedCategory}
                   readOnly
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-700"
+                  className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-black"
                 />
               </div>
 
@@ -360,7 +380,7 @@ function CreateEventContent() {
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Describe your event in detail..."
                   rows={6}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all resize-none"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all resize-none text-black placeholder-gray-400"
                 />
               </div>
 
@@ -376,7 +396,7 @@ function CreateEventContent() {
                     onChange={(e) => setCapacity(e.target.value)}
                     placeholder="e.g. 100"
                     min="1"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-black placeholder-gray-400"
                   />
                   <p className="text-gray-500 text-xs mt-1">Leave empty for unlimited capacity</p>
                 </div>
@@ -393,7 +413,7 @@ function CreateEventContent() {
                     min="0"
                     step="0.01"
                     required
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-black placeholder-gray-400"
                   />
                   <p className="text-gray-500 text-xs mt-1">Budget will be reviewed by admin before approval</p>
                 </div>
@@ -570,72 +590,89 @@ function CreateEventContent() {
           {/* Step 3: Venue */}
           {currentStep === 3 && (
             <div className="space-y-6">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">Select Venue</h2>
-                <p className="text-gray-600">Choose a location for your event</p>
-              </div>
-
-              {recommendedVenues.length > 0 && (
+              <div className="space-y-6">
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                    Recommended for {selectedCategory}
-                  </h3>
-                  <div className="space-y-3">
-                    {recommendedVenues.map((venue, index) => (
-                      <div
-                        key={index}
-                        onClick={() => setSelectedVenue(venue.name)}
-                        className={`border-2 rounded-xl p-4 cursor-pointer transition-all ${
-                          selectedVenue === venue.name
-                            ? 'border-blue-500 bg-blue-50'
-                            : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
-                        }`}
-                      >
-                        <div className="flex items-start gap-4">
-                          <input
-                            type="radio"
-                            checked={selectedVenue === venue.name}
-                            onChange={() => setSelectedVenue(venue.name)}
-                            className="mt-1 w-5 h-5 text-blue-600"
-                          />
-                          <div className="flex-1">
-                            <div className="flex items-start justify-between mb-2">
-                              <h4 className="font-semibold text-lg text-gray-900">{venue.name}</h4>
-                              <div className="flex items-center gap-1 bg-yellow-50 px-3 py-1 rounded-full">
-                                <Star className="w-4 h-4 text-yellow-500 fill-current" />
-                                <span className="text-sm font-medium text-gray-700">{venue.rating}</span>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">Select Venue</h2>
+                  <p className="text-gray-600">Choose a location for your event</p>
+                </div>
+                <div className="flex gap-4 mb-4">
+                  <button
+                    type="button"
+                    className={`px-4 py-2 rounded-lg font-semibold border-2 transition-all ${selectedVenue && recommendedVenues.some(v => v.name === selectedVenue) ? 'bg-blue-600 text-white border-blue-600' : 'bg-black text-white border-black'}`}
+                    onClick={() => setSelectedVenue(recommendedVenues[0]?.name || '')}
+                    disabled={recommendedVenues.length === 0}
+                  >
+                    Recommended Venues
+                  </button>
+                  <button
+                    type="button"
+                    className={`px-4 py-2 rounded-lg font-semibold border-2 transition-all ${selectedVenue && !recommendedVenues.some(v => v.name === selectedVenue) ? 'bg-blue-600 text-white border-blue-600' : 'bg-black text-white border-black'}`}
+                    onClick={() => setSelectedVenue('')}
+                  >
+                    Custom Venue
+                  </button>
+                </div>
+                {(!selectedVenue || recommendedVenues.some(v => v.name === selectedVenue)) && recommendedVenues.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                      Recommended for {selectedCategory}
+                    </h3>
+                    <div className="space-y-3">
+                      {recommendedVenues.map((venue, index) => (
+                        <div
+                          key={index}
+                          onClick={() => setSelectedVenue(venue.name)}
+                          className={`border-2 rounded-xl p-4 cursor-pointer transition-all ${
+                            selectedVenue === venue.name
+                              ? 'border-blue-500 bg-blue-50'
+                              : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
+                          }`}
+                        >
+                          <div className="flex items-start gap-4">
+                            <input
+                              type="radio"
+                              checked={selectedVenue === venue.name}
+                              onChange={() => setSelectedVenue(venue.name)}
+                              className="mt-1 w-5 h-5 text-blue-600"
+                            />
+                            <div className="flex-1">
+                              <div className="flex items-start justify-between mb-2">
+                                <h4 className="font-semibold text-lg text-gray-900">{venue.name}</h4>
+                                <div className="flex items-center gap-1 bg-yellow-50 px-3 py-1 rounded-full">
+                                  <Star className="w-4 h-4 text-yellow-500 fill-current" />
+                                  <span className="text-sm font-medium text-gray-700">{venue.rating}</span>
+                                </div>
                               </div>
-                            </div>
-                            <div className="flex items-center gap-2 text-gray-600 mb-2">
-                              <MapPin className="w-4 h-4" />
-                              <span>{venue.location}</span>
-                            </div>
-                            <div className="flex items-center gap-4 text-sm">
-                              <span className="text-blue-600 font-semibold">{venue.price}</span>
-                              <div className="flex items-center gap-1 text-gray-600">
-                                <Users className="w-4 h-4" />
-                                <span>{venue.capacity} guests</span>
+                              <div className="flex items-center gap-2 text-gray-600 mb-2">
+                                <MapPin className="w-4 h-4" />
+                                <span>{venue.location}</span>
+                              </div>
+                              <div className="flex items-center gap-4 text-sm">
+                                <span className="text-blue-600 font-semibold">{venue.price}</span>
+                                <div className="flex items-center gap-1 text-gray-600">
+                                  <Users className="w-4 h-4" />
+                                  <span>{venue.capacity} guests</span>
+                                </div>
                               </div>
                             </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
-
-              <div className="border-t pt-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Or enter custom venue *
-                </label>
-                <input
-                  type="text"
-                  value={selectedVenue}
-                  onChange={(e) => setSelectedVenue(e.target.value)}
-                  placeholder="Enter venue name or location"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-                />
+                )}
+                {(!recommendedVenues.some(v => v.name === selectedVenue) || recommendedVenues.length === 0) && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Or enter a custom venue</label>
+                    <input
+                      type="text"
+                      value={selectedVenue}
+                      onChange={(e) => setSelectedVenue(e.target.value)}
+                      placeholder="Custom venue name or address"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-black placeholder-gray-400"
+                    />
+                  </div>
+                )}
               </div>
             </div>
           )}
