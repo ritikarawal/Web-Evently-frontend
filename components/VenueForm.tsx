@@ -24,6 +24,7 @@ export default function VenueForm({ initial = {}, onCancel, onSave }: VenueFormP
     contactPerson: initial.contactPerson || "",
     contactEmail: initial.contactEmail || "",
     contactPhone: initial.contactPhone || "",
+    recommendedCategory: initial.recommendedCategory || "",
   });
 
   const handleChange = (e: any) => setForm({ ...form, [e.target.name]: e.target.value });
@@ -49,6 +50,20 @@ export default function VenueForm({ initial = {}, onCancel, onSave }: VenueFormP
         <input name="country" value={form.country} onChange={handleChange} placeholder="Country" className="p-3 border rounded-lg text-black placeholder-black" />
       </div>
       <textarea name="description" value={form.description} onChange={handleChange} placeholder="Short description" className="w-full p-3 border rounded-lg text-black placeholder-black" rows={3} />
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">Recommend Category (optional)</label>
+        <select name="recommendedCategory" value={form.recommendedCategory} onChange={handleChange} className="w-full p-3 border rounded-lg text-black placeholder-black">
+          <option value="">None</option>
+          <option value="birthday">Birthday</option>
+          <option value="anniversary">Anniversary</option>
+          <option value="wedding">Wedding</option>
+          <option value="engagement">Engagement</option>
+          <option value="workshop">Workshop</option>
+          <option value="conference">Conference</option>
+          <option value="graduation">Graduation</option>
+          <option value="fundraisers">Fundraisers</option>
+        </select>
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <input name="capacity" value={form.capacity} onChange={handleChange} placeholder="Capacity" className="p-3 border rounded-lg text-black placeholder-black" />
         <input name="pricePerHour" value={form.pricePerHour} onChange={handleChange} placeholder="Price / hour" className="p-3 border rounded-lg text-black placeholder-black" />

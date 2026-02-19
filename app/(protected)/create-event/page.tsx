@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { ChevronLeft, ChevronRight, MapPin, Calendar, Clock, Upload, Star, Users, Check } from 'lucide-react';
 import Link from 'next/link';
 import { createEvent, updateEvent } from '@/lib/api/events';
+import * as venuesApi from '@/lib/api/venues';
 import NavigationBar from "@/components/NavigationBar";
 
 function CreateEventContent() {
@@ -35,76 +36,6 @@ function CreateEventContent() {
     { number: 3, title: 'Venue', description: 'Where it happens' },
     { number: 4, title: 'Review', description: 'Confirm details' }
   ];
-
-  // Venue recommendations based on event category
-  const venuesByCategory: Record<string, Array<{
-    name: string;
-    location: string;
-    rating: number;
-    price: string;
-    capacity: string;
-  }>> = {
-    birthday: [
-      { name: 'Party Palace Kathmandu', location: 'Thamel', rating: 4.8, price: '$$', capacity: '50-100' },
-      { name: 'Celebration Hall', location: 'Lazimpat', rating: 4.6, price: '$$$', capacity: '100-150' },
-      { name: 'Fun Zone Events', location: 'Durbarmarg', rating: 4.5, price: '$$', capacity: '30-80' }
-    ],
-    education: [
-      { name: 'Academic Hall', location: 'Kirtipur', rating: 4.5, price: '$', capacity: '100-200' },
-      { name: 'Learning Hub', location: 'Putalisadak', rating: 4.6, price: '$$', capacity: '30-50' },
-      { name: 'Innovation Lab', location: 'Kupondole', rating: 4.8, price: '$$$', capacity: '40-60' }
-    ],
-    business: [
-      { name: 'Business Hub Kathmandu', location: 'Durbar Marg', rating: 4.7, price: '$$$', capacity: '100-200' },
-      { name: 'Executive Meeting Space', location: 'Baluwatar', rating: 4.8, price: '$$$$', capacity: '50-100' },
-      { name: 'Professional Center', location: 'New Baneshwor', rating: 4.7, price: '$$', capacity: '80-150' }
-    ],
-    entertainment: [
-      { name: 'Grand Celebration Center', location: 'Naxal', rating: 4.7, price: '$$$', capacity: '250-350' },
-      { name: 'Fun Zone Events', location: 'Durbarmarg', rating: 4.5, price: '$$', capacity: '30-80' },
-      { name: 'Modern Display Hall', location: 'Tripureshwor', rating: 4.4, price: '$$', capacity: '200-300' }
-    ],
-    graduation: [
-      { name: 'University Auditorium', location: 'Kirtipur', rating: 4.6, price: '$$', capacity: '300-500' },
-      { name: 'Graduation Hall', location: 'Pulchowk', rating: 4.7, price: '$$$', capacity: '200-400' },
-      { name: 'Academic Center', location: 'Balkhu', rating: 4.5, price: '$$', capacity: '150-300' }
-    ],
-    anniversary: [
-      { name: 'Romantic Garden Restaurant', location: 'Lazimpat', rating: 4.8, price: '$$$$', capacity: '20-50' },
-      { name: 'Anniversary Banquet Hall', location: 'Thamel', rating: 4.7, price: '$$$', capacity: '50-100' },
-      { name: 'Couples Retreat Center', location: 'Bouddha', rating: 4.6, price: '$$$', capacity: '30-80' }
-    ],
-    other: [
-      { name: 'Community Center', location: 'Kalanki', rating: 4.4, price: '$', capacity: '50-150' },
-      { name: 'Local Hall', location: 'Swayambhu', rating: 4.3, price: '$', capacity: '30-100' },
-      { name: 'Multi-purpose Venue', location: 'Chabahil', rating: 4.5, price: '$$', capacity: '100-200' }
-    ],
-
-    workshop: [
-      { name: 'Academic Hall', location: 'Kirtipur', rating: 4.5, price: '$', capacity: '100-200' },
-      { name: 'Learning Hub', location: 'Putalisadak', rating: 4.6, price: '$$', capacity: '30-50' }
-    ],
-    conference: [
-      { name: 'Business Hub Kathmandu', location: 'Durbar Marg', rating: 4.7, price: '$$$', capacity: '100-200' },
-      { name: 'Executive Meeting Space', location: 'Baluwatar', rating: 4.8, price: '$$$$', capacity: '50-100' }
-    ],
-    engagement: [
-      { name: 'Romantic Garden Restaurant', location: 'Lazimpat', rating: 4.8, price: '$$$$', capacity: '20-50' }
-    ],
-    wedding: [
-      { name: 'Celebration Hall', location: 'Lazimpat', rating: 4.6, price: '$$$', capacity: '100-150' },
-      { name: 'Party Palace Kathmandu', location: 'Thamel', rating: 4.8, price: '$$', capacity: '50-100' }
-    ],
-    fundraisers: [
-      { name: 'Community Center', location: 'Kalanki', rating: 4.4, price: '$', capacity: '50-150' },
-      { name: 'Multi-purpose Venue', location: 'Chabahil', rating: 4.5, price: '$$', capacity: '100-200' }
-    ]
-  };
-
-  const getRecommendedVenues = () => {
-    return venuesByCategory[selectedCategory] || [];
-  };
-
   useEffect(() => {
     const categoryParam = searchParams.get('category');
     if (categoryParam) {
@@ -274,7 +205,30 @@ function CreateEventContent() {
     }
   };
 
-  const recommendedVenues = getRecommendedVenues();
+  // recommended venues removed from quick create per request
+  const [recommendedVenues, setRecommendedVenues] = useState<any[]>([]);
+  const [recommendedLoading, setRecommendedLoading] = useState(false);
+
+  const fetchRecommended = async (category: string) => {
+    if (!category) {
+      setRecommendedVenues([]);
+      return;
+    }
+    setRecommendedLoading(true);
+    try {
+      const res = await venuesApi.getVenues({ recommendedCategory: category.toLowerCase(), isActive: true });
+      setRecommendedVenues(res || []);
+    } catch (err) {
+      console.error('Failed to fetch recommended venues:', err);
+      setRecommendedVenues([]);
+    } finally {
+      setRecommendedLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (selectedCategory) fetchRecommended(selectedCategory);
+  }, [selectedCategory]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -598,7 +552,7 @@ function CreateEventContent() {
                 <div className="flex gap-4 mb-4">
                   <button
                     type="button"
-                    className={`px-4 py-2 rounded-lg font-semibold border-2 transition-all ${selectedVenue && recommendedVenues.some(v => v.name === selectedVenue) ? 'bg-blue-600 text-white border-blue-600' : 'bg-black text-white border-black'}`}
+                    className={`px-4 py-2 rounded-lg font-semibold border-2 transition-all ${selectedVenue && recommendedVenues.some((v) => v.name === selectedVenue) ? 'bg-blue-600 text-white border-blue-600' : 'bg-black text-white border-black'}`}
                     onClick={() => setSelectedVenue(recommendedVenues[0]?.name || '')}
                     disabled={recommendedVenues.length === 0}
                   >
@@ -606,7 +560,7 @@ function CreateEventContent() {
                   </button>
                   <button
                     type="button"
-                    className={`px-4 py-2 rounded-lg font-semibold border-2 transition-all ${selectedVenue && !recommendedVenues.some(v => v.name === selectedVenue) ? 'bg-blue-600 text-white border-blue-600' : 'bg-black text-white border-black'}`}
+                    className={`px-4 py-2 rounded-lg font-semibold border-2 transition-all ${selectedVenue && !recommendedVenues.some((v) => v.name === selectedVenue) ? 'bg-blue-600 text-white border-blue-600' : 'bg-black text-white border-black'}`}
                     onClick={() => setSelectedVenue('')}
                   >
                     Custom Venue
@@ -618,46 +572,50 @@ function CreateEventContent() {
                       Recommended for {selectedCategory}
                     </h3>
                     <div className="space-y-3">
-                      {recommendedVenues.map((venue, index) => (
-                        <div
-                          key={index}
-                          onClick={() => setSelectedVenue(venue.name)}
-                          className={`border-2 rounded-xl p-4 cursor-pointer transition-all ${
-                            selectedVenue === venue.name
-                              ? 'border-blue-500 bg-blue-50'
-                              : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
-                          }`}
-                        >
-                          <div className="flex items-start gap-4">
-                            <input
-                              type="radio"
-                              checked={selectedVenue === venue.name}
-                              onChange={() => setSelectedVenue(venue.name)}
-                              className="mt-1 w-5 h-5 text-blue-600"
-                            />
-                            <div className="flex-1">
-                              <div className="flex items-start justify-between mb-2">
-                                <h4 className="font-semibold text-lg text-gray-900">{venue.name}</h4>
-                                <div className="flex items-center gap-1 bg-yellow-50 px-3 py-1 rounded-full">
-                                  <Star className="w-4 h-4 text-yellow-500 fill-current" />
-                                  <span className="text-sm font-medium text-gray-700">{venue.rating}</span>
+                      {recommendedLoading ? (
+                        <p className="text-sm text-gray-500">Loading recommendations...</p>
+                      ) : (
+                        recommendedVenues.map((venue, index) => (
+                          <div
+                            key={index}
+                            onClick={() => setSelectedVenue(venue.name)}
+                            className={`border-2 rounded-xl p-4 cursor-pointer transition-all ${
+                              selectedVenue === venue.name
+                                ? 'border-blue-500 bg-blue-50'
+                                : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
+                            }`}
+                          >
+                            <div className="flex items-start gap-4">
+                              <input
+                                type="radio"
+                                checked={selectedVenue === venue.name}
+                                onChange={() => setSelectedVenue(venue.name)}
+                                className="mt-1 w-5 h-5 text-blue-600"
+                              />
+                              <div className="flex-1">
+                                <div className="flex items-start justify-between mb-2">
+                                  <h4 className="font-semibold text-lg text-gray-900">{venue.name}</h4>
+                                  <div className="flex items-center gap-1 bg-yellow-50 px-3 py-1 rounded-full">
+                                    <Star className="w-4 h-4 text-yellow-500 fill-current" />
+                                    <span className="text-sm font-medium text-gray-700">{venue.rating || '—'}</span>
+                                  </div>
                                 </div>
-                              </div>
-                              <div className="flex items-center gap-2 text-gray-600 mb-2">
-                                <MapPin className="w-4 h-4" />
-                                <span>{venue.location}</span>
-                              </div>
-                              <div className="flex items-center gap-4 text-sm">
-                                <span className="text-blue-600 font-semibold">{venue.price}</span>
-                                <div className="flex items-center gap-1 text-gray-600">
-                                  <Users className="w-4 h-4" />
-                                  <span>{venue.capacity} guests</span>
+                                <div className="flex items-center gap-2 text-gray-600 mb-2">
+                                  <MapPin className="w-4 h-4" />
+                                  <span>{venue.city || venue.location || ''}</span>
+                                </div>
+                                <div className="flex items-center gap-4 text-sm">
+                                  <span className="text-blue-600 font-semibold">{venue.pricePerHour ? `$${venue.pricePerHour}/hr` : ''}</span>
+                                  <div className="flex items-center gap-1 text-gray-600">
+                                    <Users className="w-4 h-4" />
+                                    <span>{venue.capacity ? `${venue.capacity} guests` : ''}</span>
+                                  </div>
                                 </div>
                               </div>
                             </div>
                           </div>
-                        </div>
-                      ))}
+                        ))
+                      )}
                     </div>
                   </div>
                 )}

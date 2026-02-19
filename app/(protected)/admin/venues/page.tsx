@@ -73,6 +73,9 @@ export default function VenueAdminPage() {
               <div>
                 <h3 className="font-semibold text-lg">{v.name}</h3>
                 <p className="text-sm text-gray-600">{v.city} — {v.capacity} capacity</p>
+                {v.recommendedCategory && (
+                  <div className="mt-1 text-xs text-indigo-600">Recommended for: {v.recommendedCategory}</div>
+                )}
               </div>
               <div className="flex gap-2">
                 <button onClick={() => { setEditing(v); setShowForm(true); }} className="px-3 py-1 bg-gray-100 rounded">Edit</button>
