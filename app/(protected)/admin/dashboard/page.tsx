@@ -90,7 +90,7 @@ export default function AdminDashboardPage() {
   const [submitting, setSubmitting] = useState(false);
   const [imagePreview, setImagePreview] = useState<string>("");
   const [showModal, setShowModal] = useState(false);
-  const [activeTab, setActiveTab] = useState<'users' | 'events'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'events' | 'venues'>('users');
   const [showBudgetModal, setShowBudgetModal] = useState(false);
   const [selectedEventForBudget, setSelectedEventForBudget] = useState<EventItem | null>(null);
   const [budgetProposalData, setBudgetProposalData] = useState({
@@ -394,6 +394,16 @@ export default function AdminDashboardPage() {
             >
               Event Approvals
             </button>
+            <button
+              onClick={() => setActiveTab('venues')}
+              className={`px-6 py-2 rounded-lg text-sm font-medium transition-colors ${
+                activeTab === 'venues'
+                  ? 'bg-rose-900 text-white'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+              }`}
+            >
+              Venues
+            </button>
           </div>
         </div>
 
@@ -523,6 +533,24 @@ export default function AdminDashboardPage() {
             </div>
           )}
         </div>
+        )}
+
+        {/* Venues Tab */}
+        {activeTab === 'venues' && (
+          <div className="bg-white rounded-2xl shadow p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-lg font-semibold">Venue Management</h2>
+              <div className="flex gap-3">
+                <Link href="http://localhost:3000/admin/venues?createvenues" className="px-4 py-2 bg-rose-900 text-white rounded-lg text-sm font-semibold hover:bg-rose-800 transition-colors">
+                  Create Venues
+                </Link>
+                <Link href="http://localhost:3000/venues" className="px-4 py-2 text-sm text-rose-900 hover:underline">
+                  View Public Venues
+                </Link>
+              </div>
+            </div>
+            <p className="text-sm text-gray-600">Quick access to venue CRUD and listings.</p>
+          </div>
         )}
 
         {/* Events Tab */}
