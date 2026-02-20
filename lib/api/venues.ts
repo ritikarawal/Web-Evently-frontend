@@ -28,7 +28,7 @@ export const getVenues = async (filters?: any) => {
   }
 };
 
-export const getVenue = async (id: string) => {
+export const getVenueById = async (id: string) => {
   try {
     const res = await axios.get(`/api/venues/${id}`);
     return res.data.data;

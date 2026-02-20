@@ -22,11 +22,15 @@ interface Event {
   capacity?: number;
   attendees: any[];
   organizer: {
+    _id: string;
     firstName: string;
     lastName: string;
   };
   createdAt: string;
   isPublic: boolean;
+  budgetBreakdown?: {
+    [category: string]: number;
+  };
 }
 
 export default function HomePage() {
@@ -61,11 +65,11 @@ export default function HomePage() {
     try {
       // Fetch all public events that are approved or published
       const response = await getEvents({ 
-        isPublic: true
+        isPublic: true,
+        status: ['approved', 'published']
       });
-      
-      // Don't filter by categories - show all public approved/published events
-      setEvents(response.data || []);
+      const fetchedEvents = response.data || [];
+      setEvents(fetchedEvents);
     } catch (error) {
       console.error("Error fetching public events:", error);
     } finally {
@@ -141,18 +145,33 @@ export default function HomePage() {
     }
   }, [fetchPublicEvents]);
 
+  const getEventUserFlags = (event: Event) => {
+    let organizerId = undefined;
+    if (event.organizer) {
+      if (typeof event.organizer === 'string') {
+        organizerId = event.organizer;
+      } else if (event.organizer._id) {
+        organizerId = event.organizer._id;
+      }
+    }
+    const isOrganizer = organizerId && currentUserId && String(organizerId) === String(currentUserId);
+    const isUserAttending = Array.isArray(event.attendees)
+      ? event.attendees.some((att: any) => {
+          if (typeof att === 'string') return att === currentUserId;
+          if (att && att._id) return String(att._id) === String(currentUserId);
+          return false;
+        })
+      : false;
+    return { isOrganizer: !!isOrganizer, isUserAttending };
+  };
+
   const filteredEvents = events.filter(event => {
     const now = new Date();
     const eventDate = new Date(event.startDate);
-
-    switch (activeTab) {
-      case 'upcoming':
-        return eventDate >= now; // Only show upcoming public events
-      case 'past':
-        return eventDate < now; // Show past public events
-      default:
-        return true;
-    }
+    const { isOrganizer } = getEventUserFlags(event);
+    if (activeTab === 'upcoming') return eventDate >= now && !isOrganizer;
+    if (activeTab === 'past') return eventDate < now && !isOrganizer;
+    return !isOrganizer;
   });
 
   const eventCategories = [
@@ -340,16 +359,20 @@ export default function HomePage() {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredEvents.map((event) => (
-                  <EventCard
-                    key={event._id}
-                    event={event}
-                    onJoin={handleJoinEvent}
-                    onLeave={handleLeaveEvent}
-                    currentUserId={currentUserId}
-                    isLoggedIn={isLoggedIn}
-                  />
-                ))}
+                {filteredEvents.map((event) => {
+                  const { isOrganizer, isUserAttending } = getEventUserFlags(event);
+                  return (
+                    <EventCard
+                      key={event._id}
+                      event={event}
+                      onJoin={handleJoinEvent}
+                      onLeave={handleLeaveEvent}
+                      isLoggedIn={isLoggedIn}
+                      isOrganizer={isOrganizer}
+                      isUserAttending={isUserAttending}
+                    />
+                  );
+                })}
               </div>
             )}
           </div>

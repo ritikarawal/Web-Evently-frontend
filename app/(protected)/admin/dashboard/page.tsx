@@ -23,6 +23,8 @@ import {
 } from "@/lib/api/adminEvents";
 import { getEventById } from "@/lib/api/events";
 import { useNotifications } from "@/contexts/NotificationContext";
+import { getVenues, createVenue } from "@/lib/api/venues";
+import VenueForm from "@/components/VenueForm";
 
 interface UserItem {
   _id: string;
@@ -80,6 +82,7 @@ const initialFormState: AdminUserPayload = {
 };
 
 export default function AdminDashboardPage() {
+    const [showVenueModal, setShowVenueModal] = useState(false);
   const router = useRouter();
   const { notificationsEnabled, toggleNotifications } = useNotifications();
   const [users, setUsers] = useState<UserItem[]>([]);
@@ -103,6 +106,11 @@ export default function AdminDashboardPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalUsers, setTotalUsers] = useState(0);
   const [pageSize] = useState(10);
+
+  // Venues state
+  const [venues, setVenues] = useState<any[]>([]);
+  const [venuesLoading, setVenuesLoading] = useState(false);
+  const [venuesError, setVenuesError] = useState("");
 
   const buttonLabel = useMemo(
     () => (editingId ? "Update User" : "Create User"),
@@ -136,6 +144,18 @@ export default function AdminDashboardPage() {
       setLoading(false);
     }
   };
+  const loadVenues = async () => {
+    setVenuesLoading(true);
+    setVenuesError("");
+    try {
+      const data = await getVenues(); // Calls GET /venues
+      setVenues(data || []);
+    } catch (err: any) {
+      setVenuesError(err.message || "Failed to load venues");
+    } finally {
+      setVenuesLoading(false);
+    }
+  };
 
   useEffect(() => {
     const token = document.cookie.split('; ').find(row => row.startsWith('auth_token='))?.split('=')[1];
@@ -161,6 +181,7 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     loadUsers(1);
     loadEvents();
+    loadVenues();
   }, []);
 
   // Refresh selected event data when budget modal is open
@@ -174,27 +195,126 @@ export default function AdminDashboardPage() {
     }
   }, [showBudgetModal, selectedEventForBudget]);
 
+  const refreshSelectedEvent = async (eventId: string) => {
+    try {
+      const response = await getEventById(eventId);
+      if (response.data) {
+        setSelectedEventForBudget(response.data);
+      }
+    } catch (error) {
+      console.error('Failed to refresh event data:', error);
+    }
+  };
+
   const loadEvents = async () => {
     setEventsLoading(true);
     try {
       const response = await getAllEvents();
       setEvents(response.data || []);
-    } catch (error: any) {
-      console.error('Failed to load events:', error);
+    } catch (err: unknown) {
+      console.error('getAllEvents error:', err);
+      if (err instanceof Error) {
+        setError(err.message || "Failed to load events");
+      } else {
+        setError("Failed to load events");
+      }
     } finally {
       setEventsLoading(false);
     }
   };
 
-  const handleApproveEvent = async (eventId: string) => {
-    try {
-      await approveEvent(eventId);
-      await loadEvents(); // Refresh the list
-    } catch (error: any) {
-      console.error('Failed to approve event:', error);
-    }
-  };
-
+        {activeTab === 'venues' && (
+          <div className="bg-white rounded-2xl shadow p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-lg font-semibold">Venues</h2>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowVenueModal(true)}
+                  className="px-6 py-2 bg-rose-900 text-white rounded-lg text-sm font-semibold hover:bg-rose-800 transition-colors"
+                >
+                  + Create Venue
+                </button>
+                <button
+                  type="button"
+                  onClick={loadVenues}
+                  className="px-4 py-2 text-sm text-rose-900 hover:underline"
+                >
+                  Refresh
+                </button>
+              </div>
+            </div>
+            {venuesError && (
+              <div className="mb-4 rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700">
+                {venuesError}
+              </div>
+            )}
+            {venuesLoading ? (
+              <p className="text-sm text-gray-600">Loading venues...</p>
+            ) : venues.length === 0 ? (
+              <p className="text-sm text-gray-600">No venues found.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="text-left text-gray-500">
+                    <tr>
+                      <th className="pb-2">Name</th>
+                      <th className="pb-2">City</th>
+                      <th className="pb-2">Capacity</th>
+                      <th className="pb-2">Contact</th>
+                      <th className="pb-2">Type</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {venues.map((venue) => (
+                      <tr key={venue._id} className="border-t border-gray-100">
+                        <td className="py-3 font-medium">{venue.name}</td>
+                        <td className="py-3">{venue.city}</td>
+                        <td className="py-3">{venue.capacity}</td>
+                        <td className="py-3 text-xs text-gray-600">{venue.contactPerson} {venue.contactEmail}</td>
+                        <td className="py-3">
+                          <span className={`px-2 py-0.5 rounded text-xs font-semibold ${venue.isPublic ? 'bg-green-100 text-green-700 border border-green-200' : 'bg-gray-200 text-gray-700 border border-gray-300'}`}>
+                            {venue.isPublic ? 'Public' : 'Private'}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            {/* Venue Modal */}
+            {showVenueModal && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+                  <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+                    <h2 className="text-lg font-semibold">Create Venue</h2>
+                    <button
+                      type="button"
+                      onClick={() => setShowVenueModal(false)}
+                      className="text-gray-400 hover:text-gray-600"
+                    >
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                  <div className="p-6">
+                    <VenueForm
+                      onCancel={() => setShowVenueModal(false)}
+                      onSave={async (data: any) => {
+                        await createVenue(data);
+                        setShowVenueModal(false);
+                        loadVenues();
+                        toast.success('Venue created successfully!');
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
   const handleDeclineEvent = async (eventId: string, adminNotes?: string) => {
     try {
       await declineEvent(eventId, adminNotes);
@@ -225,16 +345,6 @@ export default function AdminDashboardPage() {
     }
   };
 
-  const refreshSelectedEvent = async (eventId: string) => {
-    try {
-      const response = await getEventById(eventId);
-      if (response.data) {
-        setSelectedEventForBudget(response.data);
-      }
-    } catch (error) {
-      console.error('Failed to refresh event data:', error);
-    }
-  };
   const handleDeleteEvent = async (eventId: string) => {
     if (!confirm('Are you sure you want to delete this event? This action cannot be undone.')) {
       return;
@@ -541,15 +651,51 @@ export default function AdminDashboardPage() {
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-lg font-semibold">Venue Management</h2>
               <div className="flex gap-3">
-                <Link href="http://localhost:3000/admin/venues?createvenues" className="px-4 py-2 bg-rose-900 text-white rounded-lg text-sm font-semibold hover:bg-rose-800 transition-colors">
+                <Link href="/admin/venues?createvenues" className="px-4 py-2 bg-rose-900 text-white rounded-lg text-sm font-semibold hover:bg-rose-800 transition-colors">
                   Create Venues
-                </Link>
-                <Link href="http://localhost:3000/venues" className="px-4 py-2 text-sm text-rose-900 hover:underline">
-                  View Public Venues
                 </Link>
               </div>
             </div>
-            <p className="text-sm text-gray-600">Quick access to venue CRUD and listings.</p>
+            <p className="text-sm text-gray-600 mb-4">Quick access to venue CRUD and listings.</p>
+            {venuesError && (
+              <div className="mb-4 rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700">
+                {venuesError}
+              </div>
+            )}
+            {venuesLoading ? (
+              <p className="text-sm text-gray-600">Loading venues...</p>
+            ) : venues.length === 0 ? (
+              <p className="text-sm text-gray-600">No venues found.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="text-left text-gray-500">
+                    <tr>
+                      <th className="pb-2">Name</th>
+                      <th className="pb-2">City</th>
+                      <th className="pb-2">Capacity</th>
+                      <th className="pb-2">Contact</th>
+                      <th className="pb-2">Type</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {venues.map((venue) => (
+                      <tr key={venue._id} className="border-t border-gray-100">
+                        <td className="py-3 font-medium">{venue.name}</td>
+                        <td className="py-3">{venue.city}</td>
+                        <td className="py-3">{venue.capacity}</td>
+                        <td className="py-3 text-xs text-gray-600">{venue.contactPerson} {venue.contactEmail}</td>
+                        <td className="py-3">
+                          <span className={`px-2 py-0.5 rounded text-xs font-semibold ${venue.isPublic ? 'bg-green-100 text-green-700 border border-green-200' : 'bg-gray-200 text-gray-700 border border-gray-300'}`}>
+                            {venue.isPublic ? 'Public' : 'Private'}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
 
@@ -681,7 +827,7 @@ export default function AdminDashboardPage() {
                             )}
                             {event.status === 'pending' && (
                               <button
-                                onClick={() => handleApproveEvent(event._id)}
+                                onClick={() => approveEvent(event._id)}
                                 className="px-3 py-1 bg-green-600 text-white rounded text-xs font-medium hover:bg-green-700 transition-colors"
                               >
                                 Approve
@@ -963,7 +1109,7 @@ export default function AdminDashboardPage() {
                         )}
                         {selectedEventForBudget.status === 'pending' && (
                           <button
-                            onClick={() => handleApproveEvent(selectedEventForBudget._id)}
+                            onClick={() => approveEvent(selectedEventForBudget._id)}
                             className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
