@@ -5,6 +5,7 @@ import "react-toastify/dist/ReactToastify.css";
 import { NotificationProvider } from "@/contexts/NotificationContext";
 import "./globals.css";
 
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -27,11 +28,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <NotificationProvider>
-          {children}
+          <div style={{ minHeight: '100vh' }}>
+            {children}
+          </div>
         </NotificationProvider>
         <ToastContainer
           position="top-right"

@@ -1,75 +1,68 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState, useEffect, useCallback } from "react";
-import { getProfile, logout } from "@/lib/api/auth";
+import { useCallback, useEffect, useState } from "react";
+import { getProfile } from "@/lib/api/auth";
 import { getEvents, joinEvent, leaveEvent } from "@/lib/api/events";
-import NavigationBar from "@/components/NavigationBar";
-import EventCard from "@/components/EventCard";
-import { FaBirthdayCake, FaHeart, FaRing, FaGem, FaTools, FaMicrophone, FaGraduationCap, FaDonate, FaPlus, FaCalendarAlt, FaUsers, FaStar, FaEdit, FaEye, FaTrash, FaClock, FaMapMarkerAlt, FaTicketAlt } from "react-icons/fa";
+import { EventCard } from "@/components/EventCard";
+import {
+  FaBirthdayCake,
+  FaCalendarAlt,
+  FaClock,
+  FaDonate,
+  FaGem,
+  FaGraduationCap,
+  FaHeart,
+  FaMicrophone,
+  FaPlus,
+  FaRing,
+  FaTools
+} from "react-icons/fa";
 
 interface Event {
   _id: string;
-  title: string;
-  description: string;
-  startDate: string;
-  endDate: string;
-  location: string;
-  category: string;
-  status: 'draft' | 'published' | 'cancelled' | 'pending' | 'approved' | 'declined';
+  title?: string;
+  description?: string;
+  startDate?: string;
+  endDate?: string;
+  location?: string;
+  category?: string;
+  status?: string;
   capacity?: number;
-  attendees: any[];
-  organizer: {
-    _id: string;
-    firstName: string;
-    lastName: string;
+  attendees?: Array<any>;
+  organizer?: {
+    _id?: string;
+    firstName?: string;
+    lastName?: string;
   };
-  createdAt: string;
-  isPublic: boolean;
+  createdAt?: string;
+  isPublic?: boolean;
   budgetBreakdown?: {
     [category: string]: number;
   };
 }
 
 export default function HomePage() {
-  const router = useRouter();
-  const [profilePicture, setProfilePicture] = useState<string | null>(null);
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'upcoming' | 'past'>('upcoming');
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [activeTab, setActiveTab] = useState<"upcoming" | "past">("upcoming");
   const [currentUserId, setCurrentUserId] = useState<string | undefined>(undefined);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-  const getCookieValue = (name: string) => {
-    if (typeof document === "undefined") return null;
-    const nameEQ = `${name}=`;
-    const cookies = document.cookie.split(";");
-    for (const rawCookie of cookies) {
-      const cookie = rawCookie.trim();
-      if (cookie.startsWith(nameEQ)) {
-        const value = cookie.substring(nameEQ.length);
-        try {
-          return decodeURIComponent(value);
-        } catch {
-          return value;
-        }
-      }
-    }
-    return null;
-  };
-
   const fetchPublicEvents = useCallback(async () => {
     try {
-      // Fetch all public events that are approved or published
-      const response = await getEvents({ 
+      const response = await getEvents({
         isPublic: true,
-        status: ['approved', 'published']
+        status: ["approved", "published"]
       });
       const fetchedEvents = response.data || [];
-      setEvents(fetchedEvents);
+      const normalized = fetchedEvents.map((event: any) => {
+        if (typeof event.organizer === "string") {
+          return { ...event, organizer: { _id: event.organizer } };
+        }
+        return event;
+      });
+      setEvents(normalized);
     } catch (error) {
       console.error("Error fetching public events:", error);
     } finally {
@@ -81,29 +74,9 @@ export default function HomePage() {
     let isMounted = true;
     const fetchProfilePicture = async () => {
       try {
-        const baseUrl =
-          process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5050";
-
-        const userDataRaw = getCookieValue("user_data");
-        if (userDataRaw) {
-          try {
-            const parsed = JSON.parse(userDataRaw) as { profilePicture?: string };
-            if (parsed?.profilePicture && isMounted) {
-              setProfilePicture(`${baseUrl}${parsed.profilePicture}`);
-            }
-          } catch {
-            // ignore invalid cookie payload
-          }
-        }
-
         const response = await getProfile();
-        const profilePic = response?.data?.profilePicture;
-        const resolvedUrl = profilePic ? `${baseUrl}${profilePic}` : null;
-        const userRole = response?.data?.role;
         const userId = response?.data?._id;
         if (isMounted) {
-          setProfilePicture(resolvedUrl);
-          setIsAdmin(userRole === 'admin');
           setCurrentUserId(userId);
           setIsLoggedIn(true);
         }
@@ -120,44 +93,36 @@ export default function HomePage() {
     };
   }, [fetchPublicEvents]);
 
-  const handleLogout = () => {
-    logout();
-    router.push("/login");
-  };
+  const handleJoinEvent = useCallback(
+    async (eventId: string) => {
+      try {
+        await joinEvent(eventId);
+        await fetchPublicEvents();
+      } catch (error: any) {
+        alert(error.message || "Failed to join event");
+      }
+    },
+    [fetchPublicEvents]
+  );
 
-  const handleJoinEvent = useCallback(async (eventId: string) => {
-    try {
-      await joinEvent(eventId);
-      // Refresh events to show updated attendance
-      await fetchPublicEvents();
-    } catch (error: any) {
-      alert(error.message || 'Failed to join event');
-    }
-  }, [fetchPublicEvents]);
-
-  const handleLeaveEvent = useCallback(async (eventId: string) => {
-    try {
-      await leaveEvent(eventId);
-      // Refresh events to show updated attendance
-      await fetchPublicEvents();
-    } catch (error: any) {
-      alert(error.message || 'Failed to leave event');
-    }
-  }, [fetchPublicEvents]);
+  const handleLeaveEvent = useCallback(
+    async (eventId: string) => {
+      try {
+        await leaveEvent(eventId);
+        await fetchPublicEvents();
+      } catch (error: any) {
+        alert(error.message || "Failed to leave event");
+      }
+    },
+    [fetchPublicEvents]
+  );
 
   const getEventUserFlags = (event: Event) => {
-    let organizerId = undefined;
-    if (event.organizer) {
-      if (typeof event.organizer === 'string') {
-        organizerId = event.organizer;
-      } else if (event.organizer._id) {
-        organizerId = event.organizer._id;
-      }
-    }
+    const organizerId = event.organizer?._id;
     const isOrganizer = organizerId && currentUserId && String(organizerId) === String(currentUserId);
     const isUserAttending = Array.isArray(event.attendees)
       ? event.attendees.some((att: any) => {
-          if (typeof att === 'string') return att === currentUserId;
+          if (typeof att === "string") return att === currentUserId;
           if (att && att._id) return String(att._id) === String(currentUserId);
           return false;
         })
@@ -165,12 +130,13 @@ export default function HomePage() {
     return { isOrganizer: !!isOrganizer, isUserAttending };
   };
 
-  const filteredEvents = events.filter(event => {
+  const filteredEvents = events.filter((event) => {
+    if (!event.startDate) return false;
     const now = new Date();
     const eventDate = new Date(event.startDate);
     const { isOrganizer } = getEventUserFlags(event);
-    if (activeTab === 'upcoming') return eventDate >= now && !isOrganizer;
-    if (activeTab === 'past') return eventDate < now && !isOrganizer;
+    if (activeTab === "upcoming") return eventDate >= now && !isOrganizer;
+    if (activeTab === "past") return eventDate < now && !isOrganizer;
     return !isOrganizer;
   });
 
@@ -241,49 +207,10 @@ export default function HomePage() {
     }
   ];
 
-  const recommendedVenues = {
-    birthday: [
-      { name: 'Party Palace Kathmandu', location: 'Thamel', rating: 4.8, price: '$$', capacity: '50-100' },
-      { name: 'Celebration Hall', location: 'Lazimpat', rating: 4.6, price: '$$$', capacity: '100-150' },
-      { name: 'Fun Zone Events', location: 'Durbarmarg', rating: 4.5, price: '$$', capacity: '30-80' }
-    ],
-    anniversary: [
-      { name: 'Romantic Garden Restaurant', location: 'Lazimpat', rating: 4.8, price: '$$$$', capacity: '20-50' },
-      { name: 'Anniversary Banquet Hall', location: 'Thamel', rating: 4.7, price: '$$$', capacity: '50-100' },
-      { name: 'Couples Retreat Center', location: 'Bouddha', rating: 4.6, price: '$$$', capacity: '30-80' }
-    ],
-    wedding: [
-      { name: 'Celebration Hall', location: 'Lazimpat', rating: 4.6, price: '$$$', capacity: '100-150' },
-      { name: 'Party Palace Kathmandu', location: 'Thamel', rating: 4.8, price: '$$', capacity: '50-100' }
-    ],
-    engagement: [
-      { name: 'Romantic Garden Restaurant', location: 'Lazimpat', rating: 4.8, price: '$$$$', capacity: '20-50' }
-    ],
-    workshop: [
-      { name: 'Academic Hall', location: 'Kirtipur', rating: 4.5, price: '$', capacity: '100-200' },
-      { name: 'Learning Hub', location: 'Putalisadak', rating: 4.6, price: '$$', capacity: '30-50' }
-    ],
-    conference: [
-      { name: 'Business Hub Kathmandu', location: 'Durbar Marg', rating: 4.7, price: '$$$', capacity: '100-200' },
-      { name: 'Executive Meeting Space', location: 'Baluwatar', rating: 4.8, price: '$$$$', capacity: '50-100' }
-    ],
-    graduation: [
-      { name: 'University Auditorium', location: 'Kirtipur', rating: 4.6, price: '$$', capacity: '300-500' },
-      { name: 'Graduation Hall', location: 'Pulchowk', rating: 4.7, price: '$$$', capacity: '200-400' }
-    ],
-    fundraisers: [
-      { name: 'Community Center', location: 'Kalanki', rating: 4.4, price: '$', capacity: '50-150' },
-      { name: 'Multi-purpose Venue', location: 'Chabahil', rating: 4.5, price: '$$', capacity: '100-200' }
-    ]
-  };
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
-      {/* Header */}
-      <NavigationBar profilePicture={profilePicture} isAdmin={isAdmin} />
-
+    <main className="flex-1">
       {/* Dashboard Header */}
-      <section className="max-w-7xl mx-auto px-6 py-8">
+      <section className="w-full h-full px-6 py-8">
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-8">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Discover Events</h1>
@@ -300,22 +227,22 @@ export default function HomePage() {
       </section>
 
       {/* Main Content */}
-      <section className="max-w-7xl mx-auto px-6 pb-16">
-        <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 overflow-hidden">
+      <section className="w-full h-full px-6 pb-16">
+        <div className="bg-white/70 backdrop-blur-sm overflow-hidden">
           {/* Tabs */}
           <div className="border-b border-gray-200">
             <nav className="flex">
               {[
-                { id: 'upcoming', label: 'Upcoming Events', icon: FaCalendarAlt },
-                { id: 'past', label: 'Past Events', icon: FaClock }
+                { id: "upcoming", label: "Upcoming Events", icon: FaCalendarAlt },
+                { id: "past", label: "Past Events", icon: FaClock }
               ].map((tab) => (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id as any)}
+                  onClick={() => setActiveTab(tab.id as "upcoming" | "past")}
                   className={`flex items-center gap-2 px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
                     activeTab === tab.id
-                      ? 'border-indigo-600 text-indigo-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      ? "border-indigo-600 text-indigo-600"
+                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                   }`}
                 >
                   <tab.icon className="w-4 h-4" />
@@ -340,14 +267,14 @@ export default function HomePage() {
                   <FaCalendarAlt className="w-8 h-8 text-gray-400" />
                 </div>
                 <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  {activeTab === 'upcoming' && 'No upcoming events'}
-                  {activeTab === 'past' && 'No past events'}
+                  {activeTab === "upcoming" && "No upcoming events"}
+                  {activeTab === "past" && "No past events"}
                 </h3>
                 <p className="text-gray-600 mb-6">
-                  {activeTab === 'upcoming' && 'Check back later for new public events!'}
-                  {activeTab === 'past' && 'Past public events will appear here.'}
+                  {activeTab === "upcoming" && "Check back later for new public events!"}
+                  {activeTab === "past" && "Past public events will appear here."}
                 </p>
-                {activeTab === 'upcoming' && (
+                {activeTab === "upcoming" && (
                   <Link
                     href="/create-event"
                     className="inline-flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-3 rounded-xl font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all duration-200"
@@ -380,8 +307,8 @@ export default function HomePage() {
       </section>
 
       {/* Quick Create Section */}
-      <section className="max-w-7xl mx-auto px-6 pb-16">
-        <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8">
+      <section className="w-full h-full px-6 pb-16">
+        <div className="bg-white/70 backdrop-blur-sm p-8">
           <div className="text-center mb-8">
             <h2 className="text-2xl font-bold text-gray-900 mb-2">Quick Create</h2>
             <p className="text-gray-600">Choose an event type to get started quickly</p>
@@ -394,7 +321,7 @@ export default function HomePage() {
                   href={`/create-event?category=${category.name.toLowerCase()}`}
                   className={`${category.bgColor} ${category.hoverColor} ${category.borderColor} border-2 rounded-xl p-4 flex flex-col items-center justify-center gap-2 shadow-sm hover:shadow-md transition-all duration-200 hover:scale-105 group cursor-pointer`}
                 >
-                  <div className={`text-2xl group-hover:scale-110 transition-transform duration-200`}>
+                  <div className="text-2xl group-hover:scale-110 transition-transform duration-200">
                     <category.icon className={category.iconColor} />
                   </div>
                   <span className="text-xs font-medium text-gray-700 text-center">{category.name}</span>
@@ -404,6 +331,6 @@ export default function HomePage() {
           </div>
         </div>
       </section>
-    </div>
+    </main>
   );
 }

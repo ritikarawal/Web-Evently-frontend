@@ -90,30 +90,7 @@ export default function NavigationBar({ profilePicture, isAdmin = false }: Navig
         </div>
       </div>
 
-      {/* Navigation Tabs */}
-      <nav className="bg-gradient-to-r from-[var(--primary-light)] to-[var(--surface)] shadow-sm">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="flex gap-8 border-b border-[var(--primary)]/20">
-            <Link href="/home" className="px-4 py-4 font-semibold text-black border-b-2 border-[var(--primary)] bg-[var(--primary)]/10 rounded-t-lg transition-all duration-300">
-              🏠 Events
-            </Link>
-            <Link href="/my-events" className="px-4 py-4 font-medium text-[var(--text-secondary)] hover:text-black hover:bg-[var(--primary)]/5 rounded-t-lg transition-all duration-300">
-              📅 My Events
-            </Link>
-            <Link href="/notifications" className="px-4 py-4 font-medium text-[var(--text-secondary)] hover:text-black hover:bg-[var(--primary)]/5 rounded-t-lg transition-all duration-300">
-              🔔 Notifications
-            </Link>
-            <Link href="/settings" className="px-4 py-4 font-medium text-[var(--text-secondary)] hover:text-black hover:bg-[var(--primary)]/5 rounded-t-lg transition-all duration-300">
-              ⚙️ Settings
-            </Link>
-            {isAdmin && (
-              <Link href="/admin/dashboard" className="px-4 py-4 font-medium text-[var(--text-secondary)] hover:text-black hover:bg-[var(--primary)]/5 rounded-t-lg transition-all duration-300">
-                🛡️ Admin
-              </Link>
-            )}
-          </div>
-        </div>
-      </nav>
+      {/* Navigation Tabs removed as requested */}
     </header>
   );
 }
