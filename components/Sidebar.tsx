@@ -14,7 +14,7 @@ const navItems = [
 export default function Sidebar() {
   const pathname = usePathname();
   return (
-    <aside className="h-screen w-64 bg-gradient-to-br from-[#b2455c] via-[#d16ba5] to-[#f8b6b6] flex flex-col py-6 px-4">
+      <aside className="fixed left-0 w-64 mt-9 h-[calc(100vh-2.25rem)] bg-gradient-to-br from-[#b2455c] via-[#d16ba5] to-[#f8b6b6] flex flex-col py-6 px-4 z-30">
       {/* Logo / App Name */}
       <div className="flex items-center gap-2 mb-10 px-2">
         <div className="w-9 h-9 rounded-xl bg-white/30 flex items-center justify-center text-white font-bold text-xl">E</div>
