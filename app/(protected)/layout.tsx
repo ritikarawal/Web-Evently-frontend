@@ -4,11 +4,14 @@
 import Sidebar from "@/components/Sidebar";
 import NavigationBar from "@/components/NavigationBar";
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { getProfile } from "@/lib/api/auth";
 
 export default function ProtectedLayout({ children }: { children: React.ReactNode }) {
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  const pathname = usePathname();
+  const hideSidebar = pathname.startsWith("/admin");
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -30,9 +33,11 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
         <NavigationBar profilePicture={profilePicture} isAdmin={isAdmin} />
       </div>
       <div className="flex">
-        <div className="w-64 mt-16">
-          <Sidebar />
-        </div>
+        {!hideSidebar && (
+          <div className="w-64 mt-16">
+            <Sidebar />
+          </div>
+        )}
         <main className="flex-1 p-6 md:p-10 mt-16">
           {children}
         </main>

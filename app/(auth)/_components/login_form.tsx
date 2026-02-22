@@ -6,11 +6,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { LoginFormData, loginSchema } from "@/app/(auth)/authSchema";
 import { useState } from "react";
-import { login } from "@/lib/api/auth";
-import { setAuthTokenClient, setUserDataClient } from "@/lib/client-cookie";
+import { login as loginApi } from "@/lib/api/auth";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function LoginForm() {
   const router = useRouter();
+  const { login } = useAuth();
   
   const { 
     register, 
@@ -26,10 +27,10 @@ export default function LoginForm() {
     setError("");
     try{
       
-      const result= await login(data)
+      const result= await loginApi(data)
        if (result.success) {
-                setAuthTokenClient(result.token);
-                setUserDataClient(result.data);
+                // Use AuthContext login function to set auth state
+                login(result.token, result.data);
                 const role = result?.data?.role;
                 if (role === "admin") {
                   router.push("/admin/dashboard");
@@ -37,7 +38,7 @@ export default function LoginForm() {
                   router.push("/home");
                 }
             } else {
-                throw new Error(result.message || "Registration failed");
+                throw new Error(result.message || "Login failed");
             }
       
     }catch(err: unknown){

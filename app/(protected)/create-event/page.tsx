@@ -6,7 +6,6 @@ import { ChevronLeft, ChevronRight, MapPin, Calendar, Clock, Upload, Star, Users
 import Link from 'next/link';
 import { createEvent, updateEvent } from '@/lib/api/events';
 import * as venuesApi from '@/lib/api/venues';
-import NavigationBar from "@/components/NavigationBar";
 
 function CreateEventContent() {
   const searchParams = useSearchParams();
@@ -232,73 +231,13 @@ function CreateEventContent() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <NavigationBar profilePicture={null} />
-
       <main className="max-w-4xl mx-auto px-6 py-12">
-        {/* Header */}
-        <div className="flex items-center gap-4 mb-8">
-          <Link href="/home">
-            <button className="w-12 h-12 rounded-xl bg-white hover:bg-gray-100 flex items-center justify-center shadow-sm transition-all">
-              <ChevronLeft className="w-6 h-6 text-gray-600" />
-            </button>
-          </Link>
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">
-              {isEditing ? 'Edit Event' : 'Create Event'}
-            </h1>
-            {selectedCategory && (
-              <p className="text-gray-600 mt-1">{selectedCategory}</p>
-            )}
-          </div>
-        </div>
-
-        {/* Stepper */}
-        <div className="mb-12">
-          <div className="flex items-center justify-between">
-            {steps.map((step, index) => (
-              <div key={step.number} className="flex items-center flex-1">
-                <div className="flex flex-col items-center flex-1">
-                  <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${
-                    currentStep > step.number
-                      ? 'bg-green-500 text-white'
-                      : currentStep === step.number
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-200 text-gray-500'
-                  }`}>
-                    {currentStep > step.number ? (
-                      <Check className="w-6 h-6" />
-                    ) : (
-                      <span className="font-semibold">{step.number}</span>
-                    )}
-                  </div>
-                  <div className="text-center mt-2">
-                    <p className={`text-sm font-medium ${
-                      currentStep >= step.number ? 'text-gray-900' : 'text-gray-500'
-                    }`}>
-                      {step.title}
-                    </p>
-                    <p className="text-xs text-gray-500">{step.description}</p>
-                  </div>
-                </div>
-                {index < steps.length - 1 && (
-                  <div className={`h-1 flex-1 mx-4 rounded transition-all ${
-                    currentStep > step.number ? 'bg-green-500' : 'bg-gray-200'
-                  }`} />
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-
         {/* Step Content */}
         <div className="bg-white rounded-2xl shadow-lg p-8 mb-8 min-h-[500px]">
           {/* Step 1: Basic Info */}
           {currentStep === 1 && (
             <div className="space-y-6">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">Basic Information</h2>
-                <p className="text-gray-600">Tell us about your event</p>
-              </div>
+              {/* Header removed as requested */}
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -317,12 +256,27 @@ function CreateEventContent() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Category *
                 </label>
-                <input
-                  type="text"
+                <select
                   value={selectedCategory}
-                  readOnly
-                  className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-black"
-                />
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-black bg-white"
+                >
+                  <option value="">Select a category</option>
+                  <option value="birthday">Birthday</option>
+                  <option value="anniversary">Anniversary</option>
+                  <option value="wedding">Wedding</option>
+                  <option value="engagement">Engagement</option>
+                  <option value="workshop">Workshop</option>
+                  <option value="conference">Conference</option>
+                  <option value="graduation">Graduation</option>
+                  <option value="fundraisers">Fundraisers</option>
+                  <option value="music">Music</option>
+                  <option value="sports">Sports</option>
+                  <option value="education">Education</option>
+                  <option value="business">Business</option>
+                  <option value="entertainment">Entertainment</option>
+                  <option value="other">Other</option>
+                </select>
               </div>
 
               <div>

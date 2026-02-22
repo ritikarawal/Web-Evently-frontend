@@ -3,9 +3,10 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FaCalendarAlt, FaMapMarkerAlt, FaUsers, FaSearch, FaFilter, FaTicketAlt, FaClock, FaStar } from "react-icons/fa";
-import NavigationBar from "@/components/NavigationBar";
-import { getEvents } from "@/lib/api/events";
+import { FaCalendarAlt, FaSearch, FaFilter, FaTicketAlt } from "react-icons/fa";
+import { EventCard } from "@/components/EventCard";
+import { getEvents, joinEvent, leaveEvent } from "@/lib/api/events";
+import { getProfile } from "@/lib/api/auth";
 
 interface Event {
   _id: string;
@@ -16,10 +17,11 @@ interface Event {
   location: string;
   category: string;
   capacity: number;
-  attendees: number;
+  attendees?: Array<any> | number;
   organizer: {
-    firstName: string;
-    lastName: string;
+    _id?: string;
+    firstName?: string;
+    lastName?: string;
   };
   ticketPrice: number;
   status: string;
@@ -34,6 +36,7 @@ export default function EventsPage() {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedDate, setSelectedDate] = useState("all");
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   const getCookieValue = (name: string) => {
     if (typeof document === "undefined") return null;
@@ -76,6 +79,15 @@ export default function EventsPage() {
       }
     };
 
+    const fetchProfile = async () => {
+      try {
+        const profile = await getProfile();
+        setCurrentUserId(profile._id || null);
+      } catch (error) {
+        // ignore
+      }
+    };
+
     const fetchEvents = async () => {
       try {
         const response = await getEvents();
@@ -93,12 +105,39 @@ export default function EventsPage() {
     };
 
     fetchProfilePicture();
+    fetchProfile();
     fetchEvents();
 
     return () => {
       isMounted = false;
     };
   }, []);
+
+  const handleJoinEvent = async (eventId: string) => {
+    try {
+      await joinEvent(eventId);
+      const response = await getEvents();
+      if (response.success) {
+        setEvents(response.data || []);
+        setFilteredEvents(response.data || []);
+      }
+    } catch (error: any) {
+      alert(error.message || "Failed to join event");
+    }
+  };
+
+  const handleLeaveEvent = async (eventId: string) => {
+    try {
+      await leaveEvent(eventId);
+      const response = await getEvents();
+      if (response.success) {
+        setEvents(response.data || []);
+        setFilteredEvents(response.data || []);
+      }
+    } catch (error: any) {
+      alert(error.message || "Failed to leave event");
+    }
+  };
 
   useEffect(() => {
     let filtered = events;
@@ -169,10 +208,21 @@ export default function EventsPage() {
     { value: "month", label: "This Month" }
   ];
 
+  const getEventUserFlags = (event: Event) => {
+    const organizerId = event.organizer?._id ?? (event as any)?.organizer;
+    const isOrganizer = organizerId && currentUserId && String(organizerId) === String(currentUserId);
+    const isUserAttending = Array.isArray(event.attendees)
+      ? event.attendees.some((att: any) => {
+          if (typeof att === "string") return att === currentUserId;
+          if (att && att._id) return String(att._id) === String(currentUserId);
+          return false;
+        })
+      : false;
+    return { isOrganizer: !!isOrganizer, isUserAttending };
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
-      {/* Header */}
-      <NavigationBar profilePicture={profilePicture} />
 
       {/* Hero Section */}
       <section className="relative overflow-hidden bg-gradient-to-r from-indigo-600 to-purple-600">
@@ -273,63 +323,22 @@ export default function EventsPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredEvents.map((event) => (
-              <div key={event._id} className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 overflow-hidden hover:shadow-xl transition-all duration-200 hover:scale-105">
-                {/* Event Image Placeholder */}
-                <div className="h-48 bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center">
-                  <div className="text-center">
-                    <FaTicketAlt className="w-12 h-12 text-indigo-400 mx-auto mb-2" />
-                    <span className="text-sm font-medium text-gray-600 capitalize">{event.category}</span>
-                  </div>
-                </div>
-
-                <div className="p-6">
-                  <div className="flex items-start justify-between mb-3">
-                    <h3 className="text-lg font-semibold text-gray-900 line-clamp-2">{event.title}</h3>
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                      event.ticketPrice === 0
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-blue-100 text-blue-800'
-                    }`}>
-                      {event.ticketPrice === 0 ? 'Free' : `$${event.ticketPrice}`}
-                    </span>
-                  </div>
-
-                  <p className="text-gray-600 text-sm mb-4 line-clamp-2">{event.description}</p>
-
-                  <div className="space-y-2 mb-4">
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <FaCalendarAlt className="w-4 h-4 text-indigo-500" />
-                      <span>{new Date(event.startDate).toLocaleDateString()}</span>
-                      <FaClock className="w-4 h-4 text-indigo-500 ml-2" />
-                      <span>{new Date(event.startDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                    </div>
-
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <FaMapMarkerAlt className="w-4 h-4 text-indigo-500" />
-                      <span>{event.location}</span>
-                    </div>
-
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <FaUsers className="w-4 h-4 text-indigo-500" />
-                      <span>{event.attendees}/{event.capacity} attendees</span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div className="text-sm text-gray-500">
-                      by {event.organizer.firstName} {event.organizer.lastName}
-                    </div>
-                    <Link
-                      href={`/event/${event._id}`}
-                      className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-2 rounded-lg font-medium hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 text-sm inline-block text-center"
-                    >
-                      View Details
-                    </Link>
-                  </div>
-                </div>
-              </div>
-            ))}
+            {filteredEvents.map((event) => {
+              const { isOrganizer, isUserAttending } = getEventUserFlags(event);
+              return (
+                <EventCard
+                  key={event._id}
+                  event={event}
+                  showActions={true}
+                  currentUserId={currentUserId || undefined}
+                  isLoggedIn={true}
+                  isOrganizer={isOrganizer}
+                  isUserAttending={isUserAttending}
+                  onJoin={handleJoinEvent}
+                  onLeave={handleLeaveEvent}
+                />
+              );
+            })}
           </div>
         )}
       </section>
