@@ -15,6 +15,13 @@ export default function NavigationBar({ profilePicture, isAdmin = false }: Navig
   const router = useRouter();
   const { unreadCount, refreshNotifications } = useNotifications();
 
+  // Prepend API base URL if profilePicture is a relative path
+  let profilePictureUrl = profilePicture;
+  if (profilePicture && profilePicture.startsWith("/")) {
+    const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5050";
+    profilePictureUrl = baseUrl + profilePicture;
+  }
+
   return (
     <header className="bg-gradient-to-r from-[var(--primary)] to-[var(--primary-light)] shadow-xl">
       <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
@@ -72,9 +79,9 @@ export default function NavigationBar({ profilePicture, isAdmin = false }: Navig
           onClick={() => router.push('/profile')}
           className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 overflow-hidden border border-white/30"
         >
-          {profilePicture ? (
+          {profilePictureUrl ? (
             <Image
-              src={profilePicture}
+              src={profilePictureUrl}
               alt="Profile"
               width={48}
               height={48}

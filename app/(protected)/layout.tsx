@@ -1,12 +1,28 @@
 "use client";
 
+
 import Sidebar from "@/components/Sidebar";
 import NavigationBar from "@/components/NavigationBar";
+import { useEffect, useState } from "react";
+import { getProfile } from "@/lib/api/auth";
 
 export default function ProtectedLayout({ children }: { children: React.ReactNode }) {
-  // You can fetch profilePicture and isAdmin from context or props if needed
-  const profilePicture = null; // Replace with actual user profile picture
-  const isAdmin = false; // Replace with actual admin status
+  const [profilePicture, setProfilePicture] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const response = await getProfile();
+        setProfilePicture(response.data?.profilePicture || null);
+        setIsAdmin(response.data?.role === "admin");
+      } catch (err) {
+        setProfilePicture(null);
+        setIsAdmin(false);
+      }
+    };
+    fetchProfile();
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-gray-100">
