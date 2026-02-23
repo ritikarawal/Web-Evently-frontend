@@ -194,33 +194,44 @@ export default function HomePage() {
   ];
 
   return (
-    <main className="flex-1">
+    <main className="flex-1 bg-gradient-to-b from-slate-50 via-white to-slate-50">
       {/* Hero Section */}
-      <section className="w-full bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 px-6 py-12 mb-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8">
-            <div>
-              <h1 className="text-4xl lg:text-5xl font-bold text-white mb-3">Welcome to Evently</h1>
-              <p className="text-lg text-white/90 mb-6">Discover, create, and manage amazing events in your community</p>
+      <section className="w-full bg-gradient-to-br from-indigo-600 via-purple-600 to-rose-600 px-6 py-16 mb-8 relative overflow-hidden">
+        {/* Animated background circles */}
+        <div className="absolute top-0 left-0 w-96 h-96 bg-white/10 rounded-full -translate-x-1/2 -translate-y-1/2 animate-pulse"></div>
+        <div className="absolute bottom-0 right-0 w-80 h-80 bg-white/10 rounded-full translate-x-1/2 translate-y-1/2 animate-pulse animation-delay-2000"></div>
+        <div className="max-w-7xl mx-auto relative z-10">
+          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-12">
+            <div className="flex-1">
+              <div className="mb-4 inline-block px-4 py-2 bg-white/20 backdrop-blur-md rounded-full border border-white/30">
+                <p className="text-sm font-semibold text-white">✨ Welcome to Evently</p>
+              </div>
+              <h1 className="text-5xl lg:text-6xl font-black text-white mb-4 leading-tight">Discover & Create<br />Amazing Events</h1>
+              <p className="text-lg text-white/95 mb-8 max-w-lg leading-relaxed">Plan unforgettable moments with our powerful event management platform. Connect with communities and make events that matter.</p>
               <div className="flex flex-wrap gap-4">
                 <Link
                   href="/create-event"
-                  className="inline-flex items-center gap-2 bg-white text-indigo-600 px-8 py-3 rounded-xl font-bold hover:bg-gray-100 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+                  className="inline-flex items-center gap-2 bg-white text-indigo-600 px-8 py-3 rounded-full font-bold hover:bg-white/95 transition-all duration-300 shadow-2xl hover:shadow-3xl transform hover:scale-110 group"
                 >
-                  <FaPlus className="w-5 h-5" />
+                  <FaPlus className="w-5 h-5 group-hover:rotate-90 transition-transform" />
                   Create Event
                 </Link>
                 <Link
                   href="#browse"
-                  className="inline-flex items-center gap-2 border-2 border-white text-white px-8 py-3 rounded-xl font-bold hover:bg-white/10 transition-all duration-200"
+                  className="inline-flex items-center gap-2 border-2 border-white text-white px-8 py-3 rounded-full font-bold hover:bg-white/15 transition-all duration-300 backdrop-blur-sm group"
                 >
-                  <FaCalendarAlt className="w-5 h-5" />
+                  <FaCalendarAlt className="w-5 h-5 group-hover:scale-110 transition-transform" />
                   Browse Events
                 </Link>
               </div>
             </div>
-            <div className="hidden lg:block text-white/20 text-6xl">
-              <FaCalendarAlt className="w-40 h-40" />
+            <div className="hidden lg:flex items-center justify-center flex-1">
+              <div className="relative w-64 h-64">
+                <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-white/5 rounded-3xl blur-2xl"></div>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <FaCalendarAlt className="w-48 h-48 text-white/20 animate-bounce" />
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -228,9 +239,9 @@ export default function HomePage() {
 
       {/* Quick Create Section */}
       <section className="w-full h-full px-6 pb-8" id="browse">
-        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-8 border border-indigo-100">
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Quick Start - Choose Category</h2>
-          <p className="text-gray-600 mb-6">Start creating your event by selecting a category</p>
+        <div className="bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 rounded-3xl p-8 border border-indigo-200 shadow-lg">
+          <h2 className="text-3xl font-black text-gray-900 mb-2">Quick Start - Choose Category</h2>
+          <p className="text-gray-600 mb-8 text-lg">Select a category to begin creating your event</p>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
             {eventCategories.map((category, index) => {
@@ -239,12 +250,12 @@ export default function HomePage() {
                 <Link
                   key={category.name}
                   href={`/create-event?category=${category.name.toLowerCase()}`}
-                  className={`bg-gradient-to-br ${theme.bgGradient} border-2 ${theme.borderColor} rounded-xl p-4 flex flex-col items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all duration-300 hover:scale-110 cursor-pointer group animate-card-slide-in ${theme.animationDelay}`}
+                  className={`bg-gradient-to-br ${theme.bgGradient} border-2 ${theme.borderColor} rounded-2xl p-5 flex flex-col items-center justify-center gap-3 shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-115 cursor-pointer group animate-card-slide-in ${theme.animationDelay}`}
                 >
-                  <div className="text-3xl group-hover:scale-125 transition-transform duration-200 animate-shimmer">
+                  <div className="text-5xl group-hover:scale-125 group-hover:rotate-12 transition-all duration-300 animate-shimmer">
                     {theme.icon}
                   </div>
-                  <span className="text-xs font-semibold text-gray-700 text-center leading-tight">{theme.name}</span>
+                  <span className="text-xs font-bold text-gray-800 text-center leading-tight group-hover:text-lg transition-all">{theme.name}</span>
                 </Link>
               );
             })}
@@ -254,9 +265,9 @@ export default function HomePage() {
 
       {/* Main Content */}
       <section className="w-full h-full px-6 pb-16">
-        <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-200">
+        <div className="bg-white rounded-3xl shadow-2xl overflow-hidden border border-gray-200 backdrop-blur-sm bg-white/95">
           {/* Tabs */}
-          <div className="border-b border-gray-200 bg-gray-50">
+          <div className="border-b border-gray-200 bg-gradient-to-r from-gray-50 to-indigo-50">
             <nav className="flex">
               {[
                 { id: "upcoming", label: "Upcoming Events", icon: FaCalendarAlt },
@@ -265,13 +276,13 @@ export default function HomePage() {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as "upcoming" | "past")}
-                  className={`flex items-center gap-2 px-6 py-4 text-sm font-semibold border-b-2 transition-all duration-200 ${
+                  className={`flex items-center gap-2 px-8 py-4 text-sm font-bold border-b-3 transition-all duration-300 group ${
                     activeTab === tab.id
-                      ? "border-indigo-600 text-indigo-600 bg-white"
-                      : "border-transparent text-gray-600 hover:text-indigo-600 hover:bg-white"
+                      ? "border-indigo-600 text-indigo-600 bg-white shadow-sm"
+                      : "border-transparent text-gray-600 hover:text-indigo-600 hover:bg-white/50 group-hover:border-indigo-200"
                   }`}
                 >
-                  <tab.icon className="w-4 h-4" />
+                  <tab.icon className={`w-5 h-5 transition-all ${activeTab === tab.id ? 'scale-110' : 'group-hover:scale-110'}`} />
                   {tab.label}
                 </button>
               ))}
@@ -279,7 +290,7 @@ export default function HomePage() {
           </div>
 
           {/* Events Content */}
-          <div className="p-6">
+          <div className="p-8 bg-gradient-to-b from-white to-gray-50/50">
             {loading ? (
               <div className="flex items-center justify-center py-12">
                 <div className="flex items-center space-x-3">
@@ -288,30 +299,30 @@ export default function HomePage() {
                 </div>
               </div>
             ) : filteredEvents.length === 0 ? (
-              <div className="text-center py-12">
-                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <FaCalendarAlt className="w-8 h-8 text-gray-400" />
+                <div className="text-center py-16">
+                <div className="w-20 h-20 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <FaCalendarAlt className="w-10 h-10 text-indigo-400" />
                 </div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                <h3 className="text-2xl font-bold text-gray-900 mb-3">
                   {activeTab === "upcoming" && "No upcoming events"}
                   {activeTab === "past" && "No past events"}
                 </h3>
-                <p className="text-gray-600 mb-6">
-                  {activeTab === "upcoming" && "Check back later for new public events!"}
-                  {activeTab === "past" && "Past public events will appear here."}
+                <p className="text-gray-600 mb-8 text-lg">
+                  {activeTab === "upcoming" && "No upcoming events yet. Be the first to create one!"}
+                  {activeTab === "past" && "Past events will appear here once they conclude."}
                 </p>
                 {activeTab === "upcoming" && (
                   <Link
                     href="/create-event"
-                    className="inline-flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-3 rounded-xl font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all duration-200"
+                    className="inline-flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-8 py-4 rounded-full font-bold hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
                   >
-                    <FaPlus className="w-4 h-4" />
-                    Create an Event
+                    <FaPlus className="w-5 h-5" />
+                    Create Your First Event
                   </Link>
                 )}
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 py-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 py-4">
                 {filteredEvents.map((event) => {
                   const { isOrganizer, isUserAttending } = getEventUserFlags(event);
                   return (

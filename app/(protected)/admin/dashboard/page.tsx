@@ -54,7 +54,6 @@ interface EventItem {
   };
   createdAt: string;
   adminNotes?: string;
-  // ...existing code...
 }
 
 const initialFormState: AdminUserPayload = {
@@ -82,7 +81,6 @@ export default function AdminDashboardPage() {
   const [imagePreview, setImagePreview] = useState<string>("");
   const [showModal, setShowModal] = useState(false);
   const [activeTab, setActiveTab] = useState<'users' | 'events' | 'venues'>('users');
-  // ...existing code...
   const [events, setEvents] = useState<EventItem[]>([]);
   const [eventsLoading, setEventsLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);

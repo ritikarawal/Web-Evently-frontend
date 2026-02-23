@@ -2,12 +2,11 @@
 
 import { useState } from "react";
 import { Save, Trash, Plus } from "lucide-react";
-import { link } from "fs";
 
 interface VenueFormProps {
   initial?: any;
   onCancel?: () => void;
-  onSave: (data: any) => void;
+  onSave: (data: any) => Promise<void> | void;
 }
 
 export default function VenueForm({ initial = {}, onCancel, onSave }: VenueFormProps) {
@@ -30,6 +29,8 @@ export default function VenueForm({ initial = {}, onCancel, onSave }: VenueFormP
   const [step, setStep] = useState(1);
   const [touched, setTouched] = useState<{[key: string]: boolean}>({});
   const [success, setSuccess] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   const handleChange = (e: any) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -38,7 +39,7 @@ export default function VenueForm({ initial = {}, onCancel, onSave }: VenueFormP
 
   const validateStep = () => {
     if (step === 1) {
-      return form.name && form.city && form.address;
+      return form.name && form.city && form.address && form.country;
     }
     if (step === 2) {
       return form.capacity && (form.pricePerHour || form.pricePerDay);
@@ -55,12 +56,14 @@ export default function VenueForm({ initial = {}, onCancel, onSave }: VenueFormP
   };
   const prevStep = () => setStep(step - 1);
 
-  const submit = (e: any) => {
+  const submit = async (e: any) => {
     e.preventDefault();
     if (!validateStep()) {
       setTouched({ ...touched, all: true });
       return;
     }
+    setError(null);
+    setSubmitting(true);
     const payload = {
       ...form,
       capacity: Number(form.capacity || 0),
@@ -68,8 +71,14 @@ export default function VenueForm({ initial = {}, onCancel, onSave }: VenueFormP
       pricePerDay: form.pricePerDay ? Number(form.pricePerDay) : undefined,
       amenities: form.amenities ? form.amenities.split(",").map((s: string) => s.trim()) : [],
     };
-    onSave(payload);
-    setSuccess(true);
+    try {
+      await onSave(payload);
+      setSuccess(true);
+    } catch (saveError: any) {
+      setError(saveError?.message || "Failed to create venue");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -100,7 +109,7 @@ export default function VenueForm({ initial = {}, onCancel, onSave }: VenueFormP
               <input name="name" value={form.name} onChange={handleChange} placeholder="Venue name" className="p-3 border rounded-lg w-full text-black placeholder-black" required autoFocus />
               <input name="city" value={form.city} onChange={handleChange} placeholder="City" className="p-3 border rounded-lg w-full text-black placeholder-black" required />
               <input name="address" value={form.address} onChange={handleChange} placeholder="Address" className="p-3 border rounded-lg w-full text-black placeholder-black" required />
-              <input name="country" value={form.country} onChange={handleChange} placeholder="Country" className="p-3 border rounded-lg w-full text-black placeholder-black" />
+              <input name="country" value={form.country} onChange={handleChange} placeholder="Country" className="p-3 border rounded-lg w-full text-black placeholder-black" required />
               <textarea name="description" value={form.description} onChange={handleChange} placeholder="Short description" className="w-full p-3 border rounded-lg text-black placeholder-black" rows={3} />
             </div>
           )}
@@ -138,16 +147,23 @@ export default function VenueForm({ initial = {}, onCancel, onSave }: VenueFormP
             </div>
           )}
 
+          {error && (
+            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {error}
+            </div>
+          )}
           <div className="flex gap-3 justify-between mt-8">
-            <button type="button" onClick={onCancel} className="px-4 py-2 text-black bg-gray-200 rounded-lg">Cancel</button>
+            <button type="button" onClick={onCancel} className="px-4 py-2 text-black bg-gray-200 rounded-lg" disabled={submitting}>Cancel</button>
             {step > 1 && (
-              <button type="button" onClick={prevStep} className="px-4 py-2 rounded-lg bg-gray-200">Back</button>
+              <button type="button" onClick={prevStep} className="px-4 py-2 rounded-lg bg-gray-200" disabled={submitting}>Back</button>
             )}
             {step < 3 && (
-              <button type="button" onClick={nextStep} className="px-4 py-2 rounded-lg bg-indigo-600 text-white">Next</button>
+              <button type="button" onClick={nextStep} className="px-4 py-2 rounded-lg bg-indigo-600 text-white" disabled={submitting}>Next</button>
             )}
             {step === 3 && (
-              <button type="submit" className="px-4 py-2 rounded-lg bg-indigo-600 text-white">Submit</button>
+              <button type="submit" className="px-4 py-2 rounded-lg bg-indigo-600 text-white" disabled={submitting}>
+                {submitting ? "Submitting..." : "Submit"}
+              </button>
             )}
           </div>
         </>
