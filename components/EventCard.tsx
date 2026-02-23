@@ -179,9 +179,8 @@ export const EventCard: React.FC<EventCardProps> = ({
             </p>
 
             <div className="flex items-center gap-3 text-xs text-gray-600">
-              <span className="flex items-center gap-1">
-                Start: {formatDate(event.startDate)}
-              </span>
+              <div className="flex items-center gap-1 text-xs text-gray-600">
+              </div>
             </div>
 
             {/* Tap to Open Hint */}
@@ -233,42 +232,11 @@ export const EventCard: React.FC<EventCardProps> = ({
           {/* Header with Icon and Title */}
           <div className="flex items-start gap-6 mb-6">
             <div className={`flex-shrink-0 w-20 h-20 rounded-2xl ${theme.iconBg} flex items-center justify-center text-4xl shadow-lg border-2 ${theme.borderColor}`}>
-              {theme.icon}
+                {theme.icon}
             </div>
-            <div className="flex-1">
-              <div className="flex items-center gap-3 mb-2 flex-wrap">
-                <h3 className="text-2xl font-bold text-gray-900">
-                  {event.title}
-                </h3>
-                <span className={`px-3 py-1 text-xs font-semibold rounded-full ${theme.badgeBg} ${theme.badgeText} border-2 ${theme.borderColor}`}>
-                  {event.isPublic ? "Public" : "Private"}
-                </span>
-              </div>
-              <p className={`text-sm font-bold ${theme.textColor} mb-2`}>{theme.name}</p>
-              <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg ${theme.badgeBg} border-2 ${theme.borderColor}`}>
-                <span className="text-gray-600 text-sm font-semibold">Organized by:</span>
-                <span className={`font-bold ${theme.textColor}`}>
-                  {event.organizer?.firstName} {event.organizer?.lastName}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Description */}
-          <div className={`mb-6 p-4 rounded-xl ${theme.badgeBg} border-2 ${theme.borderColor}`}>
-            <p className={`text-xs font-bold ${theme.textColor} mb-2`}>📝 About this event</p>
-            <p className="text-sm text-gray-700 leading-relaxed">
-              {event.description}
-            </p>
-          </div>
-
-          {/* Info Grid - Enhanced */}
-          <div className="grid grid-cols-2 gap-4 mb-6">
-            <div className={`p-4 rounded-xl ${theme.badgeBg} border-2 ${theme.borderColor} shadow-sm`}>
-              <div className="flex items-center gap-3 mb-2">
-                <span className="text-2xl">📅</span>
-                <p className={`text-xs font-bold ${theme.textColor}`}>Start Date</p>
-              </div>
+            <div className="flex flex-col">
+              <span className="text-2xl">📅</span>
+              <p className={`text-xs font-bold ${theme.textColor}`}>Start Date</p>
               <p className="text-sm font-semibold text-gray-800">{formatDate(event.startDate)}</p>
             </div>
             <div className={`p-4 rounded-xl ${theme.badgeBg} border-2 ${theme.borderColor} shadow-sm`}>

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { EventCard } from "@/components/EventCard";
-import { getEvents, getUserEvents } from "@/lib/api/events";
+import { getEvents, getUserEvents, leaveEvent } from "@/lib/api/events";
 import { getProfile } from "@/lib/api/auth";
 
 export default function BookedEventsPage() {
@@ -13,23 +13,27 @@ export default function BookedEventsPage() {
   const [error, setError] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
+  const refreshUserEvents = async () => {
+    const response = await getUserEvents();
+    if (response.success === false) {
+      setError(response.message || "Failed to fetch your events");
+      return;
+    }
+    const data = response.data || [];
+    if (Array.isArray(data)) {
+      setEvents(data);
+      setJoinedEventsApi([]);
+    } else {
+      setEvents(data.events || []);
+      setJoinedEventsApi(data.joinedEvents || []);
+    }
+  };
+
   useEffect(() => {
     const fetchUserEvents = async () => {
       try {
         setLoading(true);
-        const response = await getUserEvents();
-        if (response.success === false) {
-          setError(response.message || "Failed to fetch your events");
-        } else {
-          const data = response.data || [];
-          if (Array.isArray(data)) {
-            setEvents(data);
-            setJoinedEventsApi([]);
-          } else {
-            setEvents(data.events || []);
-            setJoinedEventsApi(data.joinedEvents || []);
-          }
-        }
+        await refreshUserEvents();
       } catch (err: any) {
         setError(err.message || "Failed to fetch your events");
       } finally {
@@ -66,6 +70,15 @@ export default function BookedEventsPage() {
     };
     fetchProfile();
   }, []);
+
+  const handleLeaveEvent = async (eventId: string) => {
+    try {
+      await leaveEvent(eventId);
+      await refreshUserEvents();
+    } catch (err: any) {
+      setError(err.message || "Failed to leave event");
+    }
+  };
 
   const getOrganizerId = (event: any) => {
     if (!event) return null;
@@ -143,6 +156,7 @@ export default function BookedEventsPage() {
               isLoggedIn={true}
               isOrganizer={isOrganizerEvent(event)}
               isUserAttending={isJoinedEvent(event)}
+              onLeave={handleLeaveEvent}
             />
           ))}
         </div>
