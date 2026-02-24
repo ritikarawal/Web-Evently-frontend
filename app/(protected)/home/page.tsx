@@ -59,7 +59,7 @@ export default function HomePage() {
           isPublic: true,
           status: ["approved", "published"]
         });
-        const apiEvents = response.data || [];
+        const apiEvents = (response as any)?.data || [];
         const normalized = apiEvents.map((event: any) => {
           if (typeof event.organizer === "string") {
             return { ...event, organizer: { _id: event.organizer } };
@@ -334,6 +334,7 @@ export default function HomePage() {
                       isLoggedIn={isLoggedIn}
                       isOrganizer={isOrganizer}
                       isUserAttending={isUserAttending}
+                      currentUserId={currentUserId}
                     />
                   );
                 })}

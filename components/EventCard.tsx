@@ -1,8 +1,18 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { getCategoryTheme, getAudioForCategory } from "@/constants/categoryThemes";
 import { X } from "lucide-react";
+import { KhaltiPayButton } from "@/components/KhaltiPayButton"; // Import the KhaltiPayButton component
+import {
+  clearPaymentStatus,
+  getEventPaymentSummary,
+  getPaymentNotifications,
+  getPaymentStatus,
+  setPaymentStatus as setStoredPaymentStatus,
+  type PaymentStatus,
+} from "@/lib/paymentStatus";
 
 interface Event {
   _id: string;
@@ -51,9 +61,19 @@ export const EventCard: React.FC<EventCardProps> = ({
   onBudgetResponse,
   currentUserId,
 }) => {
+  const router = useRouter();
   const [opened, setOpened] = useState(false);
   const [audioRef, setAudioRef] = useState<HTMLAudioElement | null>(null);
   const [isPlayingMusic, setIsPlayingMusic] = useState(false);
+  const [paymentStatus, setPaymentStatusState] = useState<PaymentStatus>("unpaid");
+  const [paymentSummary, setPaymentSummary] = useState<{
+    rows: { userId: string; name: string; status: PaymentStatus }[];
+    paidCount: number;
+    unpaidCount: number;
+  }>({ rows: [], paidCount: 0, unpaidCount: 0 });
+  const [paymentNotifications, setPaymentNotifications] = useState<
+    { userId: string; status: PaymentStatus; timestamp: number; eventTitle?: string }[]
+  >([]);
   
   const theme = getCategoryTheme(event.category);
   const audioPath = getAudioForCategory(event.category);
@@ -102,6 +122,22 @@ export const EventCard: React.FC<EventCardProps> = ({
     }
   }, [opened]);
 
+  useEffect(() => {
+    if (!opened) return;
+    if (currentUserId && event?._id) {
+      const status = getPaymentStatus(event._id, currentUserId);
+      setPaymentStatusState(status);
+    }
+    if (Array.isArray(event.attendees) && event?._id) {
+      const summary = getEventPaymentSummary(event._id, event.attendees);
+      setPaymentSummary(summary);
+    }
+    if (event?._id) {
+      const notices = getPaymentNotifications(event._id);
+      setPaymentNotifications(notices);
+    }
+  }, [opened, event?._id, event.attendees, currentUserId]);
+
   const toggleMusic = () => {
     if (audioRef) {
       if (isPlayingMusic) {
@@ -127,10 +163,25 @@ export const EventCard: React.FC<EventCardProps> = ({
     if (isOrganizer) return;
     if (isUserAttending) {
       if (onLeave && event._id) onLeave(event._id);
+      if (currentUserId && event._id) {
+        clearPaymentStatus(event._id, currentUserId);
+        setPaymentStatusState("unpaid");
+      }
       return;
     }
     if (isFull) return;
     if (onJoin && event._id) onJoin(event._id);
+    if (currentUserId && event._id) {
+      setStoredPaymentStatus(event._id, currentUserId, "unpaid");
+      setPaymentStatusState("unpaid");
+    }
+  };
+
+  const handleProceedPayment = () => {
+    if (!event._id) return;
+    const amount = event.ticketPrice ?? 0;
+    const title = encodeURIComponent(event.title ?? "Event");
+    router.push(`/payments?eventId=${event._id}&amount=${amount}&title=${title}`);
   };
 
   if (!opened) {
@@ -199,63 +250,80 @@ export const EventCard: React.FC<EventCardProps> = ({
 
   // OPENED ENVELOPE VIEW (Full Event Details)
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
-      <div 
-        className={`relative w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-gradient-to-br ${theme.bgGradient} rounded-3xl shadow-2xl border-4 ${theme.borderColor} animate-scale-in`}
-      >
-        {/* Decorative Top Border */}
-        <div className={`h-3 w-full bg-gradient-to-r ${theme.topBarGradient} animate-shimmer`}></div>
-
-        {/* Close Button */}
-        <button
-          onClick={handleCloseEnvelope}
-          className="absolute top-6 right-6 z-10 p-2 rounded-full bg-white/90 hover:bg-white shadow-lg hover:shadow-xl transition-all duration-200 hover:rotate-90"
-          title="Close envelope"
+    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm animate-fade-in overflow-y-auto">
+      <div className="min-h-screen flex items-center justify-center p-2 sm:p-4 py-8">
+        <div 
+          className={`relative w-full max-w-3xl bg-gradient-to-br ${theme.bgGradient} rounded-3xl shadow-2xl border-4 ${theme.borderColor} animate-scale-in`}
         >
-          <X className="w-5 h-5 text-gray-700" />
-        </button>
+          {/* Decorative Top Border */}
+          <div className={`h-3 w-full bg-gradient-to-r ${theme.topBarGradient} animate-shimmer`}></div>
 
-        {/* Music Control Button */}
-        <button
-          onClick={toggleMusic}
-          className={`absolute top-6 left-6 z-10 px-4 py-2 rounded-full font-semibold text-sm shadow-lg transition-all duration-200 hover:scale-105 ${
-            isPlayingMusic
-              ? `bg-gradient-to-r ${theme.topBarGradient} text-white`
-              : `bg-white/90 ${theme.textColor} border-2 ${theme.borderColor}`
-          }`}
-          title={isPlayingMusic ? "Stop music" : "Play music"}
-        >
-          {isPlayingMusic ? "🎵 Playing" : "🔊 Play Music"}
-        </button>
+          {/* Close Button - Sticky positioning */}
+          <button
+            onClick={handleCloseEnvelope}
+            className="sticky top-2 float-right mr-4 mt-2 z-20 p-3 rounded-full bg-white/95 hover:bg-white shadow-lg hover:shadow-xl transition-all duration-200 hover:rotate-90 border-2 border-gray-200"
+            title="Close envelope"
+          >
+            <X className="w-5 h-5 text-gray-700" />
+          </button>
 
-        {/* Opened Card Content */}
-        <div className="p-8 pt-20">
+          {/* Music Control Button - Sticky positioning */}
+          <button
+            onClick={toggleMusic}
+            className={`sticky top-2 ml-4 mt-2 z-20 px-4 py-2 rounded-full font-semibold text-sm shadow-lg transition-all duration-200 hover:scale-105 border-2 ${
+              isPlayingMusic
+                ? `bg-gradient-to-r ${theme.topBarGradient} text-white border-white/30`
+                : `bg-white/95 ${theme.textColor} ${theme.borderColor}`
+            }`}
+            title={isPlayingMusic ? "Stop music" : "Play music"}
+          >
+            {isPlayingMusic ? "🎵 Playing" : "🔊 Play Music"}
+          </button>
+
+          {/* Opened Card Content */}
+          <div className="p-6 sm:p-8 pt-4">
           {/* Header with Icon and Title */}
-          <div className="flex items-start gap-6 mb-6">
-            <div className={`flex-shrink-0 w-20 h-20 rounded-2xl ${theme.iconBg} flex items-center justify-center text-4xl shadow-lg border-2 ${theme.borderColor}`}>
+          <div className="flex items-start gap-4 mb-6">
+            <div className={`flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded-2xl ${theme.iconBg} flex items-center justify-center text-3xl sm:text-4xl shadow-lg border-2 ${theme.borderColor}`}>
                 {theme.icon}
             </div>
-            <div className="flex flex-col">
-              <span className="text-2xl">📅</span>
-              <p className={`text-xs font-bold ${theme.textColor}`}>Start Date</p>
+            <div className="flex-1">
+              <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full ${theme.badgeBg} border ${theme.borderColor} mb-2`}>
+                <span className="text-sm">{theme.icon}</span>
+                <span className={`font-bold ${theme.textColor} text-xs`}>{theme.name}</span>
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">{event.title}</h2>
+              <p className={`text-sm font-semibold ${theme.textColor}`}>
+                By {event.organizer?.firstName} {event.organizer?.lastName}
+              </p>
+            </div>
+          </div>
+
+          {/* Event Info Grid - Responsive */}
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+            <div className={`p-4 rounded-xl ${theme.badgeBg} border-2 ${theme.borderColor} shadow-sm`}>
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-2xl">📅</span>
+                <p className={`text-xs font-bold ${theme.textColor}`}>Start Date</p>
+              </div>
               <p className="text-sm font-semibold text-gray-800">{formatDate(event.startDate)}</p>
             </div>
             <div className={`p-4 rounded-xl ${theme.badgeBg} border-2 ${theme.borderColor} shadow-sm`}>
-              <div className="flex items-center gap-3 mb-2">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-2xl">🏁</span>
+                <p className={`text-xs font-bold ${theme.textColor}`}>End Date</p>
+              </div>
+              <p className="text-sm font-semibold text-gray-800">{formatDate(event.endDate)}</p>
+            </div>
+            <div className={`p-4 rounded-xl ${theme.badgeBg} border-2 ${theme.borderColor} shadow-sm`}>
+              <div className="flex items-center gap-2 mb-2">
                 <span className="text-2xl">🎯</span>
                 <p className={`text-xs font-bold ${theme.textColor}`}>Capacity</p>
               </div>
               <p className="text-sm font-semibold text-gray-800">{event.capacity ?? "Unlimited"}</p>
             </div>
             <div className={`p-4 rounded-xl ${theme.badgeBg} border-2 ${theme.borderColor} shadow-sm`}>
-              <div className="flex items-center gap-3 mb-2">
-                <span className="text-2xl">📍</span>
-                <p className={`text-xs font-bold ${theme.textColor}`}>Location</p>
-              </div>
-              <p className="text-sm font-semibold text-gray-800 line-clamp-1">{event.location}</p>
-            </div>
-            <div className={`p-4 rounded-xl ${theme.badgeBg} border-2 ${theme.borderColor} shadow-sm`}>
-              <div className="flex items-center gap-3 mb-2">
+              <div className="flex items-center gap-2 mb-2">
                 <span className="text-2xl">📊</span>
                 <p className={`text-xs font-bold ${theme.textColor}`}>Status</p>
               </div>
@@ -263,13 +331,44 @@ export const EventCard: React.FC<EventCardProps> = ({
             </div>
           </div>
 
+          {/* Location and Description - Full Width */}
+          <div className={`p-4 rounded-xl ${theme.badgeBg} border-2 ${theme.borderColor} shadow-sm mb-6`}>
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-2xl">📍</span>
+              <p className={`text-xs font-bold ${theme.textColor}`}>Location</p>
+            </div>
+            <p className="text-sm font-semibold text-gray-800">{event.location}</p>
+          </div>
+
+          {event.description && (
+            <div className={`p-4 rounded-xl ${theme.badgeBg} border-2 ${theme.borderColor} shadow-sm mb-6`}>
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-2xl">📝</span>
+                <p className={`text-xs font-bold ${theme.textColor}`}>Description</p>
+              </div>
+              <p className="text-sm text-gray-700">{event.description}</p>
+            </div>
+          )}
+
           {/* Badges Row - Enhanced */}
           <div className="flex flex-wrap gap-3 mb-6">
-            {/* Paid/Free Badge */}
+            {/* Paid/Free Badge and Khalti Button */}
             {event.eventType === 'paid' || (event.ticketPrice && event.ticketPrice > 0) ? (
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-yellow-100 to-yellow-200 text-yellow-800 rounded-xl font-bold text-sm border-2 border-yellow-300 shadow-md">
-                💰 Paid{event.ticketPrice ? ` • $${event.ticketPrice}` : ''}
-              </div>
+              <>
+                <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-yellow-100 to-yellow-200 text-yellow-800 rounded-xl font-bold text-sm border-2 border-yellow-300 shadow-md">
+                  💰 Paid{event.ticketPrice ? ` • $${event.ticketPrice}` : ''}
+                </div>
+                <KhaltiPayButton event={event} />
+                {isUserAttending && !isOrganizer && (
+                  <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm border-2 shadow-md ${
+                    paymentStatus === "paid"
+                      ? "bg-gradient-to-r from-emerald-100 to-emerald-200 text-emerald-800 border-emerald-300"
+                      : "bg-gradient-to-r from-amber-100 to-amber-200 text-amber-800 border-amber-300"
+                  }`}>
+                    {paymentStatus === "paid" ? "✅ Paid" : "⏳ Unpaid"}
+                  </div>
+                )}
+              </>
             ) : (
               <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-100 to-green-200 text-green-800 rounded-xl font-bold text-sm border-2 border-green-300 shadow-md">
                 🎉 Free Event
@@ -289,6 +388,81 @@ export const EventCard: React.FC<EventCardProps> = ({
               </div>
             )}
           </div>
+
+          {(event.eventType === 'paid' || (event.ticketPrice && event.ticketPrice > 0)) && isUserAttending && !isOrganizer && (
+            <div className="mb-6 rounded-2xl border-2 border-dashed border-emerald-200 bg-white/70 p-5">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                  <p className="text-sm font-bold text-emerald-700">Payment Status</p>
+                  <p className="text-xs text-gray-600">You can join now and pay later.</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="h-16 w-16 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-xl">
+                    {paymentStatus === "paid" ? "✔" : "#"}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleProceedPayment}
+                    className={`px-4 py-2 rounded-xl font-semibold text-sm shadow-sm transition-all ${
+                      paymentStatus === "paid"
+                        ? "bg-emerald-100 text-emerald-700 border border-emerald-200"
+                        : "bg-gradient-to-r from-emerald-500 to-teal-500 text-white hover:from-emerald-600 hover:to-teal-600"
+                    }`}
+                  >
+                    {paymentStatus === "paid" ? "Paid" : "Proceed to Payment"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {isOrganizer && Array.isArray(event.attendees) && event.attendees.length > 0 && (
+            <div className="mb-6 rounded-2xl border-2 border-slate-200 bg-white/80 p-5">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+                <div>
+                  <p className="text-sm font-bold text-slate-800">Attendees Payment Status</p>
+                  <p className="text-xs text-slate-500">Paid vs unpaid attendees</p>
+                </div>
+                <div className="flex gap-3 text-xs font-semibold">
+                  <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200">
+                    Paid: {paymentSummary.paidCount}
+                  </span>
+                  <span className="px-3 py-1 rounded-full bg-amber-100 text-amber-700 border border-amber-200">
+                    Unpaid: {paymentSummary.unpaidCount}
+                  </span>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {paymentSummary.rows.map((row) => (
+                  <div key={row.userId} className="flex items-center justify-between rounded-xl border border-slate-100 bg-white px-4 py-3">
+                    <span className="text-sm font-medium text-slate-800">{row.name}</span>
+                    <span className={`text-xs font-bold px-2 py-1 rounded-full ${
+                      row.status === "paid"
+                        ? "bg-emerald-100 text-emerald-700 border border-emerald-200"
+                        : "bg-amber-100 text-amber-700 border border-amber-200"
+                    }`}>
+                      {row.status === "paid" ? "Paid" : "Unpaid"}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              {paymentNotifications.length > 0 && (
+                <div className="mt-4 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
+                  <p className="text-xs font-semibold text-slate-600 mb-2">Recent payment updates</p>
+                  <div className="flex flex-col gap-2 text-xs text-slate-600">
+                    {paymentNotifications.slice(0, 5).map((notice) => {
+                      const shortId = notice.userId ? notice.userId.slice(0, 6) : "user";
+                      return (
+                        <span key={`${notice.userId}-${notice.timestamp}`}>
+                          User {shortId} marked as {notice.status}.
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {showActions && isOrganizer && (
             <div className="flex flex-col sm:flex-row gap-3 mb-6">
@@ -328,6 +502,7 @@ export const EventCard: React.FC<EventCardProps> = ({
             {!isOrganizer && isLoggedIn && !isUserAttending && !isFull && "Join Event"}
           </button>
         </div>
+      </div>
       </div>
     </div>
   );
