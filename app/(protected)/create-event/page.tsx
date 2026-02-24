@@ -8,13 +8,75 @@ import { createEvent, updateEvent } from '@/lib/api/events';
 import * as venuesApi from '@/lib/api/venues';
 
 function CreateEventContent() {
+      // Paid/Free option for public events
+      const [eventType, setEventType] = useState<'paid' | 'free'>('free');
+      const [ticketPrice, setTicketPrice] = useState('');
+    // --- Total Price Calculation ---
+    const [venueDetails, setVenueDetails] = useState<any>(null);
+    const [calculatedPrice, setCalculatedPrice] = useState<number | null>(null);
+
+    const [startTime, setStartTime] = useState('');
+    const [endTime, setEndTime] = useState('');
+
+    // recommended venues removed from quick create per request
+    const [recommendedVenues, setRecommendedVenues] = useState<any[]>([]);
+    const [recommendedLoading, setRecommendedLoading] = useState(false);
+    const [selectedVenue, setSelectedVenue] = useState('');
+
+    // Fetch venue details when selectedVenue changes
+    useEffect(() => {
+      if (!selectedVenue) {
+        setVenueDetails(null);
+        return;
+      }
+      // Try to find in recommendedVenues first
+      const found = recommendedVenues.find(v => v.name === selectedVenue);
+      if (found) {
+        setVenueDetails(found);
+        return;
+      }
+      // Otherwise, fetch by name (if API supports it)
+      venuesApi.getVenues({ name: selectedVenue }).then((venues) => {
+        setVenueDetails(venues && venues.length > 0 ? venues[0] : null);
+      }).catch(() => setVenueDetails(null));
+    }, [selectedVenue, recommendedVenues]);
+
+    // Calculate price when venueDetails or time changes
+    useEffect(() => {
+      if (!venueDetails || !startTime || !endTime) {
+        setCalculatedPrice(null);
+        return;
+      }
+      const pricing = [
+        { type: 'hourly', amount: venueDetails.pricePerHour },
+        { type: 'daily', amount: venueDetails.pricePerDay }
+      ].filter(p => p.amount);
+      const start = new Date();
+      const end = new Date();
+      // Use today's date, just set hours/minutes
+      const [sh, sm] = startTime.split(':').map(Number);
+      const [eh, em] = endTime.split(':').map(Number);
+      start.setHours(sh || 0, sm || 0, 0, 0);
+      end.setHours(eh || 0, em || 0, 0, 0);
+      const durationMs = end.getTime() - start.getTime();
+      const hourlyPricing = pricing.find(p => p.type === 'hourly');
+      const dailyPricing = pricing.find(p => p.type === 'daily');
+      
+      if (hourlyPricing && durationMs > 0) {
+        const hours = Math.ceil(durationMs / (1000 * 60 * 60));
+        setCalculatedPrice(hours * hourlyPricing.amount);
+      } else if (dailyPricing && durationMs > 0) {
+        const days = Math.ceil(durationMs / (1000 * 60 * 60 * 24));
+        setCalculatedPrice(days * dailyPricing.amount);
+      } else {
+        setCalculatedPrice(null);
+      }
+    }, [venueDetails, startTime, endTime]);
   const searchParams = useSearchParams();
   const [currentStep, setCurrentStep] = useState(1);
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [startTime, setStartTime] = useState('');
-  const [endTime, setEndTime] = useState('');
   const [description, setDescription] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [loading, setLoading] = useState(false);
@@ -22,10 +84,7 @@ function CreateEventContent() {
   const [isEditing, setIsEditing] = useState(false);
   const [editEventId, setEditEventId] = useState<string | null>(null);
   const [eventTitle, setEventTitle] = useState('');
-  const [selectedVenue, setSelectedVenue] = useState('');
   const [isPublic, setIsPublic] = useState(true);
-  const [capacity, setCapacity] = useState<string>('');
-  const [proposedBudget, setProposedBudget] = useState<string>('');
 
   const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -56,7 +115,7 @@ function CreateEventContent() {
         setDescription(event.description);
         setSelectedVenue(event.location || '');
         setIsPublic(event.isPublic !== false); // Default to true if not specified
-        setCapacity(event.capacity ? event.capacity.toString() : '');
+        // Removed setCapacity
         localStorage.removeItem('editEvent');
       } catch (error) {
         console.error('Error parsing edit event data:', error);
@@ -140,7 +199,7 @@ function CreateEventContent() {
   const canProceedToNextStep = () => {
     switch (currentStep) {
       case 1:
-        return eventTitle.trim() !== '' && selectedCategory !== '' && proposedBudget !== '' && parseFloat(proposedBudget) > 0;
+        return eventTitle.trim() !== '' && selectedCategory !== '';
       case 2:
         return startDate !== null;
       case 3:
@@ -179,11 +238,11 @@ function CreateEventContent() {
         location: selectedVenue || 'TBD',
         category: selectedCategory.toLowerCase(),
         isPublic: isPublic,
-        capacity: capacity ? parseInt(capacity) : undefined,
-        proposedBudget: proposedBudget ? parseFloat(proposedBudget) : 0,
         status: 'pending',
         duration: `${startTime} - ${endTime}`,
         notes: description,
+        eventType: eventType,
+        ticketPrice: eventType === 'paid' ? Number(ticketPrice) : 0,
       };
 
       if (isEditing && editEventId) {
@@ -204,10 +263,7 @@ function CreateEventContent() {
     }
   };
 
-  // recommended venues removed from quick create per request
-  const [recommendedVenues, setRecommendedVenues] = useState<any[]>([]);
-  const [recommendedLoading, setRecommendedLoading] = useState(false);
-
+  // (moved up)
   const fetchRecommended = async (category: string) => {
     if (!category) {
       setRecommendedVenues([]);
@@ -292,40 +348,7 @@ function CreateEventContent() {
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    <Users className="w-4 h-4 inline mr-1" />
-                    Maximum Capacity (Optional)
-                  </label>
-                  <input
-                    type="number"
-                    value={capacity}
-                    onChange={(e) => setCapacity(e.target.value)}
-                    placeholder="e.g. 100"
-                    min="1"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-black placeholder-gray-400"
-                  />
-                  <p className="text-gray-500 text-xs mt-1">Leave empty for unlimited capacity</p>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    💰 Proposed Budget *
-                  </label>
-                  <input
-                    type="number"
-                    value={proposedBudget}
-                    onChange={(e) => setProposedBudget(e.target.value)}
-                    placeholder="e.g. 5000"
-                    min="0"
-                    step="0.01"
-                    required
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-black placeholder-gray-400"
-                  />
-                  <p className="text-gray-500 text-xs mt-1">Budget will be reviewed by admin before approval</p>
-                </div>
-              </div>
+              {/* Removed Maximum Capacity and Proposed Budget fields */}
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-3">
@@ -369,6 +392,50 @@ function CreateEventContent() {
                     </label>
                   </div>
                 </div>
+                {/* Paid/Free option for public events */}
+                {isPublic && (
+                  <div className="mt-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Event Type *</label>
+                    <div className="flex items-center gap-6">
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          name="eventType"
+                          value="free"
+                          checked={eventType === 'free'}
+                          onChange={() => setEventType('free')}
+                          className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 focus:ring-2"
+                        />
+                        <span className="ml-2">Free</span>
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          name="eventType"
+                          value="paid"
+                          checked={eventType === 'paid'}
+                          onChange={() => setEventType('paid')}
+                          className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 focus:ring-2"
+                        />
+                        <span className="ml-2">Paid</span>
+                      </label>
+                    </div>
+                    {eventType === 'paid' && (
+                      <div className="mt-3">
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Ticket Price ($)</label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={ticketPrice}
+                          onChange={e => setTicketPrice(e.target.value)}
+                          className="w-32 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-black placeholder-gray-400"
+                          placeholder="e.g. 10"
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -392,49 +459,43 @@ function CreateEventContent() {
                     type="time"
                     value={startTime}
                     onChange={(e) => setStartTime(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-black placeholder-gray-400"
                   />
                 </div>
-
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <Clock className="w-4 h-4 inline mr-1" />
                     End Time
                   </label>
                   <input
                     type="time"
                     value={endTime}
                     onChange={(e) => setEndTime(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-black placeholder-gray-400"
                   />
                 </div>
               </div>
 
-              {/* Calendar */}
+              {/* Calendar UI */}
               <div>
                 <div className="flex items-center justify-between mb-4">
-                  <label className="block text-sm font-medium text-gray-700">
-                    <Calendar className="w-4 h-4 inline mr-1" />
-                    Select Date *
-                  </label>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={goToPreviousMonth}
-                      className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                    >
-                      <ChevronLeft className="w-5 h-5 text-gray-600" />
-                    </button>
-                    <span className="px-4 py-2 font-medium text-gray-700">
-                      {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={goToNextMonth}
-                      className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                    >
-                      <ChevronRight className="w-5 h-5 text-gray-600" />
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={goToPreviousMonth}
+                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                  >
+                    <ChevronLeft className="w-5 h-5 text-gray-600" />
+                  </button>
+                  <span className="px-4 py-2 font-medium text-gray-700">
+                    {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={goToNextMonth}
+                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                  >
+                    <ChevronRight className="w-5 h-5 text-gray-600" />
+                  </button>
                 </div>
 
                 <div className="space-y-2">
@@ -598,6 +659,20 @@ function CreateEventContent() {
               </div>
 
               <div className="space-y-4">
+                {/* Total Price Section */}
+                <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
+                  <h3 className="text-sm font-medium text-yellow-700 mb-1">Total Price</h3>
+                  <p className="text-lg font-bold text-yellow-900">
+                    {calculatedPrice !== null ? `$${calculatedPrice}` : 'Set venue, start, and end time to see total price'}
+                  </p>
+                  {venueDetails && (venueDetails.pricePerHour || venueDetails.pricePerDay) && (
+                    <div className="text-xs text-gray-600 mt-1">
+                      Pricing: {venueDetails.pricePerHour ? `hourly: $${venueDetails.pricePerHour}` : ''}
+                      {venueDetails.pricePerHour && venueDetails.pricePerDay ? ', ' : ''}
+                      {venueDetails.pricePerDay ? `daily: $${venueDetails.pricePerDay}` : ''}
+                    </div>
+                  )}
+                </div>
                 <div className="bg-gray-50 rounded-lg p-4">
                   <h3 className="text-sm font-medium text-gray-500 mb-1">Event Title</h3>
                   <p className="text-lg font-semibold text-gray-900">{eventTitle}</p>
@@ -647,16 +722,7 @@ function CreateEventContent() {
                   <p className="text-lg font-semibold text-gray-900">{selectedVenue}</p>
                 </div>
 
-                {capacity && (
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <h3 className="text-sm font-medium text-gray-500 mb-1">Capacity</h3>
-                    <div className="flex items-center">
-                      <Users className="w-5 h-5 mr-2 text-blue-600" />
-                      <p className="text-lg font-semibold text-blue-700">{capacity} people</p>
-                      <p className="text-sm text-gray-600 ml-2">Maximum attendees allowed</p>
-                    </div>
-                  </div>
-                )}
+                {/* Removed Capacity review section */}
 
                 <div className="bg-gray-50 rounded-lg p-4">
                   <h3 className="text-sm font-medium text-gray-500 mb-1">Visibility</h3>

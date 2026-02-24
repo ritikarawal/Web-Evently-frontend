@@ -15,6 +15,7 @@ interface Event {
   capacity?: number;
   attendees?: Array<any> | number;
   ticketPrice?: number;
+  eventType?: 'paid' | 'free';
   isPublic?: boolean;
   organizer?: {
     firstName?: string;
@@ -264,10 +265,10 @@ export const EventCard: React.FC<EventCardProps> = ({
 
           {/* Badges Row - Enhanced */}
           <div className="flex flex-wrap gap-3 mb-6">
-            {/* Ticket Price Badge */}
-            {event.ticketPrice && event.ticketPrice > 0 ? (
+            {/* Paid/Free Badge */}
+            {event.eventType === 'paid' || (event.ticketPrice && event.ticketPrice > 0) ? (
               <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-yellow-100 to-yellow-200 text-yellow-800 rounded-xl font-bold text-sm border-2 border-yellow-300 shadow-md">
-                💰 ${event.ticketPrice}
+                💰 Paid{event.ticketPrice ? ` • $${event.ticketPrice}` : ''}
               </div>
             ) : (
               <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-100 to-green-200 text-green-800 rounded-xl font-bold text-sm border-2 border-green-300 shadow-md">

@@ -7,9 +7,8 @@ export interface CreateEventData {
   endDate: string;
   location: string;
   category: string;
-  capacity?: number;
   ticketPrice?: number;
-  proposedBudget: number;
+  eventType?: 'paid' | 'free';
   isPublic: boolean;
   duration?: string;
   notes?: string;
