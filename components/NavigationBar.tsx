@@ -23,8 +23,11 @@ export default function NavigationBar({ profilePicture, isAdmin = false }: Navig
   }
 
   return (
-    <header className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 shadow-2xl sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+    <header
+      style={{ background: 'var(--nav-background)' }}
+      className="shadow-2xl sticky top-0 z-50"
+    >
+      <div className="max-w-7xl mx-auto px-6 py-0 flex items-center justify-between">
         {/* Logo */}
         <div className="flex items-center group">
           <div className="bg-white/20 backdrop-blur-sm rounded-2xl p-2 group-hover:bg-white/30 transition-all duration-300">
@@ -36,7 +39,7 @@ export default function NavigationBar({ profilePicture, isAdmin = false }: Navig
               className="object-contain"
             />
           </div>
-          <span className="ml-3 font-bold text-white text-xl hidden sm:inline">Evently</span>
+          <span className="ml-3 font-bold text-white text-xl hidden sm:inline" style={{ color: 'var(--nav-selected)' }}>Evently</span>
         </div>
 
         {/* Search Bar */}

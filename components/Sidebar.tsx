@@ -24,18 +24,29 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="fixed left-0 w-64 mt-20 h-[calc(100vh-5rem)] bg-gradient-to-b from-gray-50 via-white to-gray-50 shadow-2xl flex flex-col py-6 px-4 z-30 border-r border-gray-200">
+    <aside
+      className="top-0 w-64 mt-1.5 h-[calc(100vh-5rem)] shadow-2xl flex flex-col py-5 px-4 z-100 border-r bg-[var(--surface)]"
+      style={{ borderColor: 'var(--border)' }}
+    >
       <nav className="flex flex-col gap-2 flex-1">
         {navItems.map((item) => (
           <Link
             key={item.href}
             href={item.href}
             className={`flex items-center gap-4 px-5 py-3 rounded-xl transition-all duration-200 font-medium ${ pathname === item.href
-              ? "bg-gradient-to-r from-indigo-100 to-purple-100 text-indigo-700 border-l-4 border-indigo-600 shadow-md"
-              : "text-gray-700 hover:bg-gray-100 hover:translate-x-1"
+              ? "shadow-md border-l-4"
+              : "hover:bg-gray-100 hover:translate-x-1"
             }`}
+            style={
+              pathname === item.href
+                ? { background: 'var(--primary-light)', color: 'var(--primary)', borderLeftColor: 'var(--primary)' }
+                : { color: 'var(--text-secondary)' }
+            }
           >
-            <span className={`text-lg ${pathname === item.href ? 'text-indigo-600' : item.color} transition-colors`}>
+            <span
+              className="text-lg transition-colors"
+              style={pathname === item.href ? { color: 'var(--primary)' } : {}}
+            >
               {item.icon}
             </span>
             <span>{item.label}</span>
@@ -44,12 +55,13 @@ export default function Sidebar() {
       </nav>
 
       {/* Divider */}
-      <div className="border-t border-gray-200 my-4"></div>
+      <div className="border-t my-4" style={{ borderColor: 'var(--border)' }}></div>
 
       {/* Logout Button - More Accessible */}
       <button
         onClick={handleLogout}
-        className="flex items-center justify-center gap-3 px-5 py-3 rounded-xl text-white bg-gradient-to-r from-red-500 via-red-600 to-red-700 hover:from-red-600 hover:via-red-700 hover:to-red-800 transition-all duration-200 w-full mt-auto font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 border-2 border-red-600/50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+        className="flex items-center justify-center gap-3 px-5 py-3 rounded-xl w-full mt-auto font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 border-2 focus:outline-none focus:ring-2 focus:ring-offset-2"
+        style={{ background: 'var(--primary)', color: 'var(--nav-selected)', borderColor: 'var(--primary-light)' }}
         title="Click to logout from your account"
         aria-label="Logout button"
       >

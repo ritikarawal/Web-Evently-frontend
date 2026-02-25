@@ -88,6 +88,18 @@
     }
   }
 
+  /* Slide up animation for modal */
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
   /* Envelope open animation */
   @keyframes envelopeOpen {
     from {
@@ -123,12 +135,16 @@
     animation: bounce 1s infinite;
   }
 
-  .animate-fade-in {
+  .animate-fadeIn {
     animation: fadeIn 0.3s ease-out forwards;
   }
 
   .animate-scale-in {
     animation: scaleIn 0.4s ease-out forwards;
+  }
+
+  .animate-slideUp {
+    animation: slideUp 0.3s ease-out forwards;
   }
 
   .animate-envelope-open {

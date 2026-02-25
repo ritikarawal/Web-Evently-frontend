@@ -110,9 +110,12 @@ export default function AdminDashboardPage() {
     try {
       const response = await getAllUsers(page, pageSize);
       console.log('getAllUsers response:', response);
-      setUsers(response.data || []);
-      setTotalPages(response.pagination?.totalPages || 1);
-      setTotalUsers(response.pagination?.totalUsers || 0);
+      if (response && typeof response === 'object') {
+        const data = response as any;
+        setUsers(data.data || []);
+        setTotalPages(data.pagination?.totalPages || 1);
+        setTotalUsers(data.pagination?.totalUsers || 0);
+      }
       setCurrentPage(page);
     } catch (err: unknown) {
       console.error('getAllUsers error:', err);
@@ -169,7 +172,8 @@ export default function AdminDashboardPage() {
     setEventsLoading(true);
     try {
       const response = await getAllEvents();
-      setEvents(response.data || []);
+      const data = response as { data?: EventItem[] };
+      setEvents(data.data || []);
     } catch (err: unknown) {
       console.error('getAllEvents error:', err);
       if (err instanceof Error) {

@@ -3,7 +3,13 @@ import Link from "next/link";
 
 export default function LandingPage() {
   return (
-    <main className="min-h-screen bg-pink-50 text-black">
+    <main
+      className="min-h-screen"
+      style={{
+        background: 'var(--background)',
+        color: 'var(--foreground)',
+      }}
+    >
 
       <header className="flex justify-between items-center px-12 py-8">
         <Link href="/">
@@ -29,7 +35,11 @@ export default function LandingPage() {
           </Link>
           <Link 
             href="/login" 
-            className="px-6 py-2 rounded-full bg-rose-900 text-white text-sm"
+            className="px-6 py-2 rounded-full"
+            style={{
+              background: 'var(--primary)',
+              color: 'var(--nav-selected)',
+            }}
           >
             Log in
           </Link>

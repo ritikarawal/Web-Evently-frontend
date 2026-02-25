@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { getCategoryTheme, getAudioForCategory } from "@/constants/categoryThemes";
 import { X } from "lucide-react";
-import { KhaltiPayButton } from "@/components/KhaltiPayButton"; // Import the KhaltiPayButton component
+import { KhaltiPayButton } from "@/components/KhaltiPayButton"; 
 import {
   clearPaymentStatus,
   getEventPaymentSummary,
@@ -13,7 +13,6 @@ import {
   setPaymentStatus as setStoredPaymentStatus,
   type PaymentStatus,
 } from "@/lib/paymentStatus";
-
 interface Event {
   _id: string;
   title?: string;
@@ -74,6 +73,9 @@ export const EventCard: React.FC<EventCardProps> = ({
   const [paymentNotifications, setPaymentNotifications] = useState<
     { userId: string; status: PaymentStatus; timestamp: number; eventTitle?: string }[]
   >([]);
+  const [showAttendeesModal, setShowAttendeesModal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterStatus, setFilterStatus] = useState<"all" | "paid" | "unpaid">("all");
   
   const theme = getCategoryTheme(event.category);
   const audioPath = getAudioForCategory(event.category);
@@ -156,6 +158,11 @@ export const EventCard: React.FC<EventCardProps> = ({
 
   const handleCloseEnvelope = () => {
     setOpened(false);
+    if (audioRef) {
+      audioRef.pause();
+      audioRef.currentTime = 0;
+    }
+    setIsPlayingMusic(false);
   };
 
   const handlePrimaryAction = () => {
@@ -250,10 +257,10 @@ export const EventCard: React.FC<EventCardProps> = ({
 
   // OPENED ENVELOPE VIEW (Full Event Details)
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm animate-fade-in overflow-y-auto">
-      <div className="min-h-screen flex items-center justify-center p-2 sm:p-4 py-8">
+    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm animate-fadeIn overflow-y-auto">
+      <div className="min-h-screen flex items-center justify-center p-2 sm:p-6 py-12">
         <div 
-          className={`relative w-full max-w-3xl bg-gradient-to-br ${theme.bgGradient} rounded-3xl shadow-2xl border-4 ${theme.borderColor} animate-scale-in`}
+          className={`relative w-full max-w-7xl min-h-screen bg-gradient-to-br ${theme.bgGradient} rounded-3xl shadow-2xl border-4 ${theme.borderColor} animate-scale-in`}
         >
           {/* Decorative Top Border */}
           <div className={`h-3 w-full bg-gradient-to-r ${theme.topBarGradient} animate-shimmer`}></div>
@@ -281,7 +288,7 @@ export const EventCard: React.FC<EventCardProps> = ({
           </button>
 
           {/* Opened Card Content */}
-          <div className="p-6 sm:p-8 pt-4">
+          <div className="p-8 sm:p-12 pt-6">
           {/* Header with Icon and Title */}
           <div className="flex items-start gap-4 mb-6">
             <div className={`flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded-2xl ${theme.iconBg} flex items-center justify-center text-3xl sm:text-4xl shadow-lg border-2 ${theme.borderColor}`}>
@@ -418,49 +425,28 @@ export const EventCard: React.FC<EventCardProps> = ({
 
           {isOrganizer && Array.isArray(event.attendees) && event.attendees.length > 0 && (
             <div className="mb-6 rounded-2xl border-2 border-slate-200 bg-white/80 p-5">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
                   <p className="text-sm font-bold text-slate-800">Attendees Payment Status</p>
-                  <p className="text-xs text-slate-500">Paid vs unpaid attendees</p>
+                  <p className="text-xs text-slate-500">Manage your event attendees</p>
                 </div>
-                <div className="flex gap-3 text-xs font-semibold">
-                  <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200">
-                    Paid: {paymentSummary.paidCount}
-                  </span>
-                  <span className="px-3 py-1 rounded-full bg-amber-100 text-amber-700 border border-amber-200">
-                    Unpaid: {paymentSummary.unpaidCount}
-                  </span>
-                </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {paymentSummary.rows.map((row) => (
-                  <div key={row.userId} className="flex items-center justify-between rounded-xl border border-slate-100 bg-white px-4 py-3">
-                    <span className="text-sm font-medium text-slate-800">{row.name}</span>
-                    <span className={`text-xs font-bold px-2 py-1 rounded-full ${
-                      row.status === "paid"
-                        ? "bg-emerald-100 text-emerald-700 border border-emerald-200"
-                        : "bg-amber-100 text-amber-700 border border-amber-200"
-                    }`}>
-                      {row.status === "paid" ? "Paid" : "Unpaid"}
+                <div className="flex items-center gap-3">
+                  <div className="flex gap-3 text-xs font-semibold">
+                    <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200">
+                      Paid: {paymentSummary.paidCount}
+                    </span>
+                    <span className="px-3 py-1 rounded-full bg-amber-100 text-amber-700 border border-amber-200">
+                      Unpaid: {paymentSummary.unpaidCount}
                     </span>
                   </div>
-                ))}
-              </div>
-              {paymentNotifications.length > 0 && (
-                <div className="mt-4 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
-                  <p className="text-xs font-semibold text-slate-600 mb-2">Recent payment updates</p>
-                  <div className="flex flex-col gap-2 text-xs text-slate-600">
-                    {paymentNotifications.slice(0, 5).map((notice) => {
-                      const shortId = notice.userId ? notice.userId.slice(0, 6) : "user";
-                      return (
-                        <span key={`${notice.userId}-${notice.timestamp}`}>
-                          User {shortId} marked as {notice.status}.
-                        </span>
-                      );
-                    })}
-                  </div>
+                  <button
+                    onClick={() => setShowAttendeesModal(true)}
+                    className="px-5 py-2 rounded-xl font-semibold text-sm bg-gradient-to-r from-indigo-500 to-purple-600 text-white hover:from-indigo-600 hover:to-purple-700 shadow-md hover:shadow-lg transition-all duration-200 transform hover:scale-105"
+                  >
+                    View Details
+                  </button>
                 </div>
-              )}
+              </div>
             </div>
           )}
 
@@ -504,6 +490,178 @@ export const EventCard: React.FC<EventCardProps> = ({
         </div>
       </div>
       </div>
+
+      {/* Enhanced Attendees Modal */}
+      {showAttendeesModal && (
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn"
+          onClick={() => {
+            setShowAttendeesModal(false);
+            setSearchQuery("");
+            setFilterStatus("all");
+          }}
+        >
+          <div 
+            className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full max-h-[85vh] overflow-hidden transform transition-all animate-slideUp"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 text-white px-6 py-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-2xl font-bold">Attendees Management</h3>
+                  <p className="text-sm text-white/90 mt-1">
+                    Total: {paymentSummary.rows.length} attendees
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowAttendeesModal(false);
+                    setSearchQuery("");
+                    setFilterStatus("all");
+                  }}
+                  className="p-2 hover:bg-white/20 rounded-xl transition-colors duration-200"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+            </div>
+
+            {/* Search and Filter Bar */}
+            <div className="px-6 py-4 bg-slate-50 border-b border-slate-200">
+              <div className="flex flex-col sm:flex-row gap-3">
+                {/* Search Input */}
+                <div className="flex-1 relative">
+                  <input
+                    type="text"
+                    placeholder="Search attendees by name..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full px-4 py-2.5 pl-10 rounded-xl border border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none transition-all"
+                  />
+                  <svg className="w-5 h-5 text-slate-400 absolute left-3 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
+
+                {/* Filter Buttons */}
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setFilterStatus("all")}
+                    className={`px-4 py-2.5 rounded-xl font-semibold text-sm transition-all ${
+                      filterStatus === "all"
+                        ? "bg-indigo-600 text-white shadow-md"
+                        : "bg-white text-slate-700 border border-slate-300 hover:bg-slate-100"
+                    }`}
+                  >
+                    All ({paymentSummary.rows.length})
+                  </button>
+                  <button
+                    onClick={() => setFilterStatus("paid")}
+                    className={`px-4 py-2.5 rounded-xl font-semibold text-sm transition-all ${
+                      filterStatus === "paid"
+                        ? "bg-emerald-600 text-white shadow-md"
+                        : "bg-white text-slate-700 border border-slate-300 hover:bg-slate-100"
+                    }`}
+                  >
+                    Paid ({paymentSummary.paidCount})
+                  </button>
+                  <button
+                    onClick={() => setFilterStatus("unpaid")}
+                    className={`px-4 py-2.5 rounded-xl font-semibold text-sm transition-all ${
+                      filterStatus === "unpaid"
+                        ? "bg-amber-600 text-white shadow-md"
+                        : "bg-white text-slate-700 border border-slate-300 hover:bg-slate-100"
+                    }`}
+                  >
+                    Unpaid ({paymentSummary.unpaidCount})
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Attendees List */}
+            <div className="overflow-y-auto" style={{ maxHeight: 'calc(85vh - 250px)' }}>
+              <div className="p-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {paymentSummary.rows
+                    .filter(row => {
+                      const matchesSearch = row.name.toLowerCase().includes(searchQuery.toLowerCase());
+                      const matchesFilter = filterStatus === "all" || row.status === filterStatus;
+                      return matchesSearch && matchesFilter;
+                    })
+                    .map((row, idx) => (
+                      <div 
+                        key={`${row.userId}-${row.status}-${idx}`} 
+                        className="flex items-center justify-between rounded-xl border-2 border-slate-200 bg-gradient-to-br from-white to-slate-50 px-4 py-3.5 hover:shadow-md hover:border-indigo-300 transition-all duration-200 transform hover:scale-[1.02]"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white ${
+                            row.status === "paid" 
+                              ? "bg-gradient-to-br from-emerald-400 to-emerald-600" 
+                              : "bg-gradient-to-br from-amber-400 to-amber-600"
+                          }`}>
+                            {row.name.charAt(0).toUpperCase()}
+                          </div>
+                          <span className="text-sm font-semibold text-slate-800">{row.name}</span>
+                        </div>
+                        <span className={`text-xs font-bold px-3 py-1.5 rounded-full shadow-sm ${
+                          row.status === "paid"
+                            ? "bg-emerald-100 text-emerald-700 border-2 border-emerald-300"
+                            : "bg-amber-100 text-amber-700 border-2 border-amber-300"
+                        }`}>
+                          {row.status === "paid" ? "✓ Paid" : "⏱ Unpaid"}
+                        </span>
+                      </div>
+                    ))}
+                </div>
+
+                {/* Empty State */}
+                {paymentSummary.rows.filter(row => {
+                  const matchesSearch = row.name.toLowerCase().includes(searchQuery.toLowerCase());
+                  const matchesFilter = filterStatus === "all" || row.status === filterStatus;
+                  return matchesSearch && matchesFilter;
+                }).length === 0 && (
+                  <div className="text-center py-12">
+                    <div className="text-6xl mb-4">🔍</div>
+                    <p className="text-slate-600 font-semibold">No attendees found</p>
+                    <p className="text-slate-400 text-sm mt-1">Try adjusting your search or filter</p>
+                  </div>
+                )}
+
+                {/* Recent Updates */}
+                {paymentNotifications.length > 0 && filterStatus === "all" && !searchQuery && (
+                  <div className="mt-6 rounded-2xl border-2 border-indigo-200 bg-gradient-to-br from-indigo-50 to-purple-50 p-5">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center">
+                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                      </div>
+                      <p className="text-sm font-bold text-indigo-900">Recent Payment Updates</p>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      {paymentNotifications.slice(0, 5).map((notice) => {
+                        const shortId = notice.userId ? notice.userId.slice(0, 6) : "user";
+                        return (
+                          <div key={`${notice.userId}-${notice.timestamp}`} className="text-xs text-indigo-700 bg-white/60 rounded-lg px-3 py-2">
+                            <span className="font-semibold">User {shortId}</span> marked as{" "}
+                            <span className={`font-bold ${
+                              notice.status === "paid" ? "text-emerald-700" : "text-amber-700"
+                            }`}>
+                              {notice.status}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
