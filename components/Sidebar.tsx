@@ -25,7 +25,7 @@ export default function Sidebar() {
 
   return (
     <aside
-      className="top-0 w-64 mt-1.5 h-[calc(100vh-5rem)] shadow-2xl flex flex-col py-5 px-4 z-100 border-r bg-[var(--surface)]"
+      className="fixed left-0 top-[4.5rem] w-64 h-[calc(100vh-4.5rem)] shadow-2xl flex flex-col py-5 px-4 z-40 border-r bg-[var(--surface)] overflow-y-auto"
       style={{ borderColor: 'var(--border)' }}
     >
       <nav className="flex flex-col gap-2 flex-1">
