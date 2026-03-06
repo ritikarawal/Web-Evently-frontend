@@ -1,473 +1,681 @@
 "use client";
 
-import { useState } from "react";
-
-interface EventCardProps {
-  event: {
-    _id: string;
-    title: string;
-    description: string;
-    startDate: string;
-    endDate: string;
-    location: string;
-    category: string;
-    capacity?: number;
-    ticketPrice?: number;
-    organizer?: any;
-    attendees?: any[];
-    isPublic?: boolean;
-    // Budget fields
-    proposedBudget?: number;
-    adminProposedBudget?: number;
-    finalBudget?: number;
-    budgetStatus?: 'pending' | 'negotiating' | 'accepted' | 'rejected';
-    budgetNegotiationHistory?: Array<{
-      proposer: 'user' | 'admin';
-      proposerId?: string;
-      amount: number;
-      message?: string;
-      timestamp: string;
-    }>;
-    status?: 'draft' | 'published' | 'cancelled' | 'pending' | 'approved' | 'declined';
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { getCategoryTheme, getAudioForCategory } from "@/constants/categoryThemes";
+import { X } from "lucide-react";
+import { KhaltiPayButton } from "@/components/KhaltiPayButton"; 
+import {
+  clearPaymentStatus,
+  getEventPaymentSummary,
+  getPaymentNotifications,
+  getPaymentStatus,
+  setPaymentStatus as setStoredPaymentStatus,
+  type PaymentStatus,
+} from "@/lib/paymentStatus";
+interface Event {
+  _id: string;
+  title?: string;
+  description?: string;
+  startDate?: string;
+  endDate?: string;
+  location?: string;
+  category?: string;
+  capacity?: number;
+  attendees?: Array<any> | number;
+  ticketPrice?: number;
+  eventType?: 'paid' | 'free';
+  isPublic?: boolean;
+  organizer?: {
+    firstName?: string;
+    lastName?: string;
   };
-  showActions?: boolean;
-  onEdit?: (event: any) => void;
-  onDelete?: (eventId: string) => void;
-  onJoin?: (eventId: string) => void;
-  onLeave?: (eventId: string) => void;
-  onBudgetResponse?: (eventId: string, accepted: boolean, counterProposal?: number, message?: string) => void;
-  currentUserId?: string;
-  isLoggedIn?: boolean;
-  isOrganizer?: boolean;
+  status?: string;
 }
 
-export default function EventCard({ 
-  event, 
-  showActions = false, 
-  onEdit, 
-  onDelete, 
-  onJoin, 
+interface EventCardProps {
+  event: Event;
+  isOrganizer?: boolean;
+  isUserAttending?: boolean;
+  isLoggedIn?: boolean;
+  onEdit?: (event: Event) => void;
+  onDelete?: (id: string) => void;
+  onLeave?: (id: string) => void;
+  onJoin?: (id: string) => void;
+  showActions?: boolean;
+  onBudgetResponse?: (eventId: string, accepted: boolean, counterProposal?: number, message?: string) => void;
+  currentUserId?: string;
+}
+
+export const EventCard: React.FC<EventCardProps> = ({
+  event,
+  isOrganizer = false,
+  isUserAttending = false,
+  isLoggedIn = false,
+  onEdit,
+  onDelete,
   onLeave,
+  onJoin,
+  showActions,
   onBudgetResponse,
   currentUserId,
-  isLoggedIn = false,
-  isOrganizer = false
-}: EventCardProps) {
-  const [showBudgetModal, setShowBudgetModal] = useState(false);
+}) => {
+  const router = useRouter();
+  const [opened, setOpened] = useState(false);
+  const [audioRef, setAudioRef] = useState<HTMLAudioElement | null>(null);
+  const [isPlayingMusic, setIsPlayingMusic] = useState(false);
+  const [paymentStatus, setPaymentStatusState] = useState<PaymentStatus>("unpaid");
+  const [paymentSummary, setPaymentSummary] = useState<{
+    rows: { userId: string; name: string; status: PaymentStatus }[];
+    paidCount: number;
+    unpaidCount: number;
+  }>({ rows: [], paidCount: 0, unpaidCount: 0 });
+  const [paymentNotifications, setPaymentNotifications] = useState<
+    { userId: string; status: PaymentStatus; timestamp: number; eventTitle?: string }[]
+  >([]);
+  const [showAttendeesModal, setShowAttendeesModal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterStatus, setFilterStatus] = useState<"all" | "paid" | "unpaid">("all");
+  
+  const theme = getCategoryTheme(event.category);
+  const audioPath = getAudioForCategory(event.category);
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+  const formatDate = (value?: string) => {
+    if (!value) return "TBD";
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return value;
+    return parsed.toISOString().slice(0, 10);
   };
 
-  const isUserAttending = currentUserId && event.attendees?.some(attendee => 
-    typeof attendee === 'string' ? attendee === currentUserId : attendee._id === currentUserId
-  );
-  const availableSeats = event.capacity ? event.capacity - (event.attendees?.length || 0) : null;
+  const getAttendeeCount = () => {
+    if (Array.isArray(event.attendees)) return event.attendees.length;
+    if (typeof event.attendees === "number") return event.attendees;
+    return 0;
+  };
+  
+  const attendeeCount = getAttendeeCount();
+  const capacityValue = typeof event.capacity === "number" ? event.capacity : null;
+  const hasCapacity = capacityValue !== null;
+  const availableSeats =
+    capacityValue !== null
+      ? capacityValue - attendeeCount
+      : null;
   const isFull = availableSeats !== null && availableSeats <= 0;
 
-  // Budget Conversation Modal
-  if (showBudgetModal) {
+  useEffect(() => {
+    // Create audio element for this event category
+    const audio = new Audio(audioPath);
+    audio.loop = true;
+    audio.volume = 0.3;
+    setAudioRef(audio);
+
+    return () => {
+      audio.pause();
+      audio.currentTime = 0;
+    };
+  }, [audioPath]);
+
+  // Auto-play music when envelope opens
+  useEffect(() => {
+    if (opened && audioRef && !isPlayingMusic) {
+      audioRef.play().catch(err => console.log("Audio playback failed:", err));
+      setIsPlayingMusic(true);
+    } else if (!opened && audioRef && isPlayingMusic) {
+      audioRef.pause();
+      setIsPlayingMusic(false);
+    }
+  }, [opened]);
+
+  useEffect(() => {
+    if (!opened) return;
+    if (currentUserId && event?._id) {
+      const status = getPaymentStatus(event._id, currentUserId);
+      setPaymentStatusState(status);
+    }
+    if (Array.isArray(event.attendees) && event?._id) {
+      const summary = getEventPaymentSummary(event._id, event.attendees);
+      setPaymentSummary(summary);
+    }
+    if (event?._id) {
+      const notices = getPaymentNotifications(event._id);
+      setPaymentNotifications(notices);
+    }
+  }, [opened, event?._id, event.attendees, currentUserId]);
+
+  const toggleMusic = () => {
+    if (audioRef) {
+      if (isPlayingMusic) {
+        audioRef.pause();
+        setIsPlayingMusic(false);
+      } else {
+        audioRef.play().catch(err => console.log("Audio playback failed:", err));
+        setIsPlayingMusic(true);
+      }
+    }
+  };
+
+  const handleOpenEnvelope = () => {
+    setOpened(true);
+  };
+
+  const handleCloseEnvelope = () => {
+    setOpened(false);
+    if (audioRef) {
+      audioRef.pause();
+      audioRef.currentTime = 0;
+    }
+    setIsPlayingMusic(false);
+  };
+
+  const handlePrimaryAction = () => {
+    if (!isLoggedIn) return;
+    if (isOrganizer) return;
+    if (isUserAttending) {
+      if (onLeave && event._id) onLeave(event._id);
+      if (currentUserId && event._id) {
+        clearPaymentStatus(event._id, currentUserId);
+        setPaymentStatusState("unpaid");
+      }
+      return;
+    }
+    if (isFull) return;
+    if (onJoin && event._id) onJoin(event._id);
+    if (currentUserId && event._id) {
+      setStoredPaymentStatus(event._id, currentUserId, "unpaid");
+      setPaymentStatusState("unpaid");
+    }
+  };
+
+  const handleProceedPayment = () => {
+    if (!event._id) return;
+    const amount = event.ticketPrice ?? 0;
+    const title = encodeURIComponent(event.title ?? "Event");
+    router.push(`/payments?eventId=${event._id}&amount=${amount}&title=${title}`);
+  };
+
+  if (!opened) {
+    // CLOSED ENVELOPE VIEW
     return (
-      <>
-        {/* Backdrop */}
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                  <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                  </svg>
+      <div 
+        onClick={handleOpenEnvelope}
+        className="relative group cursor-pointer animate-card-slide-in hover:scale-105 transition-all duration-300"
+        style={{ perspective: "1000px" }}
+      >
+        {/* Envelope Container */}
+        <div className={`relative w-full h-64 bg-gradient-to-br ${theme.bgGradient} rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 overflow-hidden border-4 ${theme.borderColor}`}>
+          
+          {/* Decorative Pattern */}
+          <div className="absolute inset-0 opacity-10">
+            <div className="absolute top-4 left-4 text-6xl">{theme.icon}</div>
+            <div className="absolute bottom-4 right-4 text-6xl rotate-12">{theme.icon}</div>
+            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-8xl opacity-5">{theme.icon}</div>
+          </div>
+
+          {/* Envelope Flap (Top Triangle) */}
+          <div 
+            className={`absolute top-0 left-0 w-full h-32 bg-gradient-to-br ${theme.topBarGradient} transition-transform duration-700 group-hover:-translate-y-2 origin-top`}
+            style={{
+              clipPath: "polygon(0 0, 50% 100%, 100% 0)"
+            }}
+          >
+            {/* Wax Seal Effect */}
+            <div className={`absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1/2 w-16 h-16 rounded-full ${theme.iconBg} border-4 ${theme.borderColor} flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300`}>
+              <span className="text-3xl">{theme.icon}</span>
+            </div>
+          </div>
+
+          {/* Content Preview on Envelope */}
+          <div className="absolute inset-0 flex flex-col items-center justify-center pt-20 px-6">
+            <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${theme.badgeBg} border-2 ${theme.borderColor} mb-4 shadow-md`}>
+              <span className="text-xl">{theme.icon}</span>
+              <span className={`font-bold ${theme.textColor} text-sm`}>{theme.name}</span>
+            </div>
+            
+            <h3 className="text-xl font-bold text-gray-900 text-center mb-2 line-clamp-2 px-4">
+              {event.title}
+            </h3>
+            
+            <p className={`text-sm font-semibold ${theme.textColor} mb-3`}>
+              {event.organizer?.firstName} {event.organizer?.lastName}
+            </p>
+
+            <div className="flex items-center gap-3 text-xs text-gray-600">
+              <div className="flex items-center gap-1 text-xs text-gray-600">
+              </div>
+            </div>
+
+            {/* Tap to Open Hint */}
+            <div className={`mt-6 px-6 py-2 rounded-full bg-white/80 backdrop-blur-sm border-2 ${theme.borderColor} shadow-lg animate-bounce`}>
+              <p className={`text-xs font-bold ${theme.textColor}`}>✨ Click to Open ✨</p>
+            </div>
+          </div>
+
+          {/* Shimmer Effect */}
+          <div className={`absolute inset-0 bg-gradient-to-r ${theme.topBarGradient} opacity-0 group-hover:opacity-20 transition-opacity duration-500`}></div>
+        </div>
+      </div>
+    );
+  }
+
+  // OPENED ENVELOPE VIEW (Full Event Details)
+  return (
+    <div className="fixed inset-0 z-50 bg-black/55 backdrop-blur-sm animate-fadeIn">
+      <div className="h-screen flex items-center justify-center p-3 sm:p-6">
+        <div 
+          className={`relative w-full max-w-5xl max-h-[90vh] bg-gradient-to-br ${theme.bgGradient} rounded-2xl shadow-2xl border-2 ${theme.borderColor} animate-scale-in overflow-hidden flex flex-col`}
+        >
+          {/* Decorative Top Border */}
+          <div className={`h-2 w-full bg-gradient-to-r ${theme.topBarGradient} animate-shimmer`}></div>
+
+          {/* Close Button */}
+          <button
+            onClick={handleCloseEnvelope}
+            className="absolute top-3 right-3 z-20 p-2.5 rounded-full bg-white/95 hover:bg-white shadow-md hover:shadow-lg transition-all duration-200 hover:rotate-90 border border-gray-200"
+            title="Close envelope"
+          >
+            <X className="w-4 h-4 text-gray-700" />
+          </button>
+
+          {/* Music Control Button */}
+          <button
+            onClick={toggleMusic}
+            className={`absolute top-3 left-3 z-20 px-3 py-1.5 rounded-full font-semibold text-xs shadow-md transition-all duration-200 hover:scale-105 border ${
+              isPlayingMusic
+                ? `bg-gradient-to-r ${theme.topBarGradient} text-white border-white/30`
+                : `bg-white/95 ${theme.textColor} ${theme.borderColor}`
+            }`}
+            title={isPlayingMusic ? "Stop music" : "Play music"}
+          >
+            {isPlayingMusic ? "🎵 Playing" : "🔊 Play Music"}
+          </button>
+
+          {/* Opened Card Content */}
+          <div className="overflow-y-auto p-5 sm:p-7 pt-14">
+          {/* Header with Icon and Title */}
+          <div className="flex items-start gap-3 mb-5">
+            <div className={`flex-shrink-0 w-14 h-14 sm:w-16 sm:h-16 rounded-xl ${theme.iconBg} flex items-center justify-center text-2xl sm:text-3xl shadow-md border ${theme.borderColor}`}>
+                {theme.icon}
+            </div>
+            <div className="flex-1">
+              <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full ${theme.badgeBg} border ${theme.borderColor} mb-2`}>
+                <span className="text-sm">{theme.icon}</span>
+                <span className={`font-bold ${theme.textColor} text-xs`}>{theme.name}</span>
+              </div>
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">{event.title}</h2>
+              <p className={`text-xs sm:text-sm font-semibold ${theme.textColor}`}>
+                By {event.organizer?.firstName} {event.organizer?.lastName}
+              </p>
+            </div>
+          </div>
+
+          {/* Event Info Grid - Responsive */}
+          <div
+            className={`grid grid-cols-2 sm:grid-cols-2 gap-3 mb-6 ${
+              hasCapacity && isOrganizer
+                ? "lg:grid-cols-4"
+                : hasCapacity || isOrganizer
+                  ? "lg:grid-cols-3"
+                  : "lg:grid-cols-2"
+            }`}
+          >
+            <div className={`p-4 rounded-xl ${theme.badgeBg} border-2 ${theme.borderColor} shadow-sm`}>
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-2xl">📅</span>
+                <p className={`text-xs font-bold ${theme.textColor}`}>Start Date</p>
+              </div>
+              <p className="text-sm font-semibold text-gray-800">{formatDate(event.startDate)}</p>
+            </div>
+            <div className={`p-4 rounded-xl ${theme.badgeBg} border-2 ${theme.borderColor} shadow-sm`}>
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-2xl">🏁</span>
+                <p className={`text-xs font-bold ${theme.textColor}`}>End Date</p>
+              </div>
+              <p className="text-sm font-semibold text-gray-800">{formatDate(event.endDate)}</p>
+            </div>
+            {hasCapacity && (
+              <div className={`p-4 rounded-xl ${theme.badgeBg} border-2 ${theme.borderColor} shadow-sm`}>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-2xl">🎯</span>
+                  <p className={`text-xs font-bold ${theme.textColor}`}>Capacity</p>
                 </div>
+                <p className="text-sm font-semibold text-gray-800">{capacityValue}</p>
+              </div>
+            )}
+            {isOrganizer && (
+              <div className={`p-4 rounded-xl ${theme.badgeBg} border-2 ${theme.borderColor} shadow-sm`}>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-2xl">📊</span>
+                  <p className={`text-xs font-bold ${theme.textColor}`}>Status</p>
+                </div>
+                <p className="text-sm font-semibold text-gray-800 capitalize">{event.status || "Active"}</p>
+              </div>
+            )}
+          </div>
+
+          {/* Location and Description - Full Width */}
+          <div className={`p-4 rounded-xl ${theme.badgeBg} border-2 ${theme.borderColor} shadow-sm mb-6`}>
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-2xl">📍</span>
+              <p className={`text-xs font-bold ${theme.textColor}`}>Location</p>
+            </div>
+            <p className="text-sm font-semibold text-gray-800">{event.location}</p>
+          </div>
+
+          {event.description && (
+            <div className={`p-4 rounded-xl ${theme.badgeBg} border-2 ${theme.borderColor} shadow-sm mb-6`}>
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-2xl">📝</span>
+                <p className={`text-xs font-bold ${theme.textColor}`}>Description</p>
+              </div>
+              <p className="text-sm text-gray-700">{event.description}</p>
+            </div>
+          )}
+
+          {/* Badges Row - Enhanced */}
+          <div className="flex flex-wrap gap-3 mb-6">
+            {/* Paid/Free Badge and Khalti Button */}
+            {event.eventType === 'paid' || (event.ticketPrice && event.ticketPrice > 0) ? (
+              <>
+                <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-yellow-100 to-yellow-200 text-yellow-800 rounded-xl font-bold text-sm border-2 border-yellow-300 shadow-md">
+                  💰 Paid{event.ticketPrice ? ` • $${event.ticketPrice}` : ''}
+                </div>
+                <KhaltiPayButton event={event} />
+                {isUserAttending && !isOrganizer && (
+                  <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm border-2 shadow-md ${
+                    paymentStatus === "paid"
+                      ? "bg-gradient-to-r from-emerald-100 to-emerald-200 text-emerald-800 border-emerald-300"
+                      : "bg-gradient-to-r from-amber-100 to-amber-200 text-amber-800 border-amber-300"
+                  }`}>
+                    {paymentStatus === "paid" ? "✅ Paid" : "⏳ Unpaid"}
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-100 to-green-200 text-green-800 rounded-xl font-bold text-sm border-2 border-green-300 shadow-md">
+                🎉 Free Event
+              </div>
+            )}
+
+            {/* Attendees Badge */}
+            {hasCapacity && (
+              <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm border-2 shadow-md animate-pulse ${
+                isFull
+                  ? "bg-gradient-to-r from-red-100 to-red-200 text-red-800 border-red-300"
+                  : "bg-gradient-to-r from-blue-100 to-blue-200 text-blue-800 border-blue-300"
+              }`}>
+                👥 {attendeeCount}/{capacityValue}
+                {!isFull && availableSeats && availableSeats > 0 && ` • ${availableSeats} spots left`}
+                {isFull && " • SOLD OUT"}
+              </div>
+            )}
+          </div>
+
+          {(event.eventType === 'paid' || (event.ticketPrice && event.ticketPrice > 0)) && isUserAttending && !isOrganizer && (
+            <div className="mb-6 rounded-2xl border-2 border-dashed border-emerald-200 bg-white/70 p-5">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-800">Budget Conversation</h3>
-                  <p className="text-sm text-gray-600">{event.title}</p>
+                  <p className="text-sm font-bold text-emerald-700">Payment Status</p>
+                  <p className="text-xs text-gray-600">You can join now and pay later.</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="h-16 w-16 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-xl">
+                    {paymentStatus === "paid" ? "✔" : "#"}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleProceedPayment}
+                    className={`px-4 py-2 rounded-xl font-semibold text-sm shadow-sm transition-all ${
+                      paymentStatus === "paid"
+                        ? "bg-emerald-100 text-emerald-700 border border-emerald-200"
+                        : "bg-gradient-to-r from-emerald-500 to-teal-500 text-white hover:from-emerald-600 hover:to-teal-600"
+                    }`}
+                  >
+                    {paymentStatus === "paid" ? "Paid" : "Proceed to Payment"}
+                  </button>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <span className={`px-3 py-1 text-sm font-medium rounded-full ${
-                  event.budgetStatus === 'accepted' ? 'bg-green-100 text-green-800' :
-                  event.budgetStatus === 'rejected' ? 'bg-red-100 text-red-800' :
-                  event.budgetStatus === 'negotiating' ? 'bg-yellow-100 text-yellow-800' :
-                  'bg-gray-100 text-gray-800'
-                }`}>
-                  {event.budgetStatus ? event.budgetStatus.charAt(0).toUpperCase() + event.budgetStatus.slice(1) : 'Unknown'}
-                </span>
+            </div>
+          )}
+
+          {isOrganizer && Array.isArray(event.attendees) && event.attendees.length > 0 && (
+            <div className="mb-6 rounded-2xl border-2 border-slate-200 bg-white/80 p-5">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                  <p className="text-sm font-bold text-slate-800">Attendees Payment Status</p>
+                  <p className="text-xs text-slate-500">Manage your event attendees</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="flex gap-3 text-xs font-semibold">
+                    <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200">
+                      Paid: {paymentSummary.paidCount}
+                    </span>
+                    <span className="px-3 py-1 rounded-full bg-amber-100 text-amber-700 border border-amber-200">
+                      Unpaid: {paymentSummary.unpaidCount}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => setShowAttendeesModal(true)}
+                    className="px-5 py-2 rounded-xl font-semibold text-sm bg-gradient-to-r from-indigo-500 to-purple-600 text-white hover:from-indigo-600 hover:to-purple-700 shadow-md hover:shadow-lg transition-all duration-200 transform hover:scale-105"
+                  >
+                    View Details
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {showActions && isOrganizer && (
+            <div className="flex flex-col sm:flex-row gap-3 mb-6">
+              <button
+                onClick={() => onEdit && onEdit(event)}
+                className={`flex-1 py-3 rounded-xl font-bold text-white shadow-md transition-all duration-200 bg-gradient-to-r ${theme.topBarGradient} hover:opacity-90`}
+              >
+                Edit Event
+              </button>
+              <button
+                onClick={() => {
+                  if (!onDelete || !event._id) return;
+                  const confirmed = window.confirm("Delete this event? This action cannot be undone.");
+                  if (confirmed) onDelete(event._id);
+                }}
+                className="flex-1 py-3 rounded-xl font-bold text-white shadow-md transition-all duration-200 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700"
+              >
+                Delete Event
+              </button>
+            </div>
+          )}
+
+          {/* Action Button */}
+          <button
+            onClick={handlePrimaryAction}
+            disabled={!isLoggedIn || isOrganizer || isFull}
+            className={`w-full py-4 rounded-xl font-bold text-white text-lg shadow-lg transition-all duration-200 bg-gradient-to-r ${theme.topBarGradient} ${
+              !isLoggedIn || isOrganizer || isFull
+                ? "opacity-60 cursor-not-allowed"
+                : "hover:shadow-xl transform hover:scale-105"
+            }`}
+          >
+            {isOrganizer && "Organizer"}
+            {!isOrganizer && !isLoggedIn && "Join Event"}
+            {!isOrganizer && isLoggedIn && isUserAttending && "Leave Event"}
+            {!isOrganizer && isLoggedIn && !isUserAttending && isFull && "Event Full"}
+            {!isOrganizer && isLoggedIn && !isUserAttending && !isFull && "Join Event"}
+          </button>
+        </div>
+      </div>
+      </div>
+
+      {/* Enhanced Attendees Modal */}
+      {showAttendeesModal && (
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn"
+          onClick={() => {
+            setShowAttendeesModal(false);
+            setSearchQuery("");
+            setFilterStatus("all");
+          }}
+        >
+          <div 
+            className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full max-h-[85vh] overflow-hidden transform transition-all animate-slideUp"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 text-white px-6 py-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-2xl font-bold">Attendees Management</h3>
+                  <p className="text-sm text-white/90 mt-1">
+                    Total: {paymentSummary.rows.length} attendees
+                  </p>
+                </div>
                 <button
-                  onClick={() => setShowBudgetModal(false)}
-                  className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                  onClick={() => {
+                    setShowAttendeesModal(false);
+                    setSearchQuery("");
+                    setFilterStatus("all");
+                  }}
+                  className="p-2 hover:bg-white/20 rounded-xl transition-colors duration-200"
                 >
-                  <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
+                  <X size={24} />
                 </button>
               </div>
             </div>
 
-            {/* Modal Body */}
-            <div className="p-6">
-              {/* Messaging Interface */}
-              <div className="bg-gray-50 rounded-lg p-4 min-h-[300px] max-h-[400px] overflow-y-auto">
-                <div className="space-y-4">
-                  {/* Initial User Proposal */}
-                  {event.proposedBudget && (
-                    <div className="flex items-start gap-3">
-                      <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
-                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                        </svg>
-                      </div>
-                      <div className="flex-1">
-                        <div className="bg-green-100 rounded-2xl rounded-tl-md px-4 py-3 max-w-md">
-                          <div className="text-sm text-green-600 font-medium mb-2">Your Initial Proposal</div>
-                          <div className="text-xl font-bold text-green-800">${event.proposedBudget.toLocaleString()}</div>
-                        </div>
-                        <div className="text-xs text-gray-500 mt-1 ml-2">Event creation</div>
-                      </div>
-                    </div>
-                  )}
+            {/* Search and Filter Bar */}
+            <div className="px-6 py-4 bg-slate-50 border-b border-slate-200">
+              <div className="flex flex-col sm:flex-row gap-3">
+                {/* Search Input */}
+                <div className="flex-1 relative">
+                  <input
+                    type="text"
+                    placeholder="Search attendees by name..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full px-4 py-2.5 pl-10 rounded-xl border border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none transition-all"
+                  />
+                  <svg className="w-5 h-5 text-slate-400 absolute left-3 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
 
-                  {/* Admin Counter */}
-                  {event.adminProposedBudget && (
-                    <div className="flex items-start gap-3 flex-row-reverse">
-                      <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center flex-shrink-0">
-                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                        </svg>
-                      </div>
-                      <div className="flex-1 flex justify-end">
-                        <div className="bg-red-100 rounded-2xl rounded-tr-md px-4 py-3 max-w-md">
-                          <div className="text-sm text-red-600 font-medium mb-2">Admin Counter-Proposal</div>
-                          <div className="text-xl font-bold text-red-800">${event.adminProposedBudget.toLocaleString()}</div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
+                {/* Filter Buttons */}
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setFilterStatus("all")}
+                    className={`px-4 py-2.5 rounded-xl font-semibold text-sm transition-all ${
+                      filterStatus === "all"
+                        ? "bg-indigo-600 text-white shadow-md"
+                        : "bg-white text-slate-700 border border-slate-300 hover:bg-slate-100"
+                    }`}
+                  >
+                    All ({paymentSummary.rows.length})
+                  </button>
+                  <button
+                    onClick={() => setFilterStatus("paid")}
+                    className={`px-4 py-2.5 rounded-xl font-semibold text-sm transition-all ${
+                      filterStatus === "paid"
+                        ? "bg-emerald-600 text-white shadow-md"
+                        : "bg-white text-slate-700 border border-slate-300 hover:bg-slate-100"
+                    }`}
+                  >
+                    Paid ({paymentSummary.paidCount})
+                  </button>
+                  <button
+                    onClick={() => setFilterStatus("unpaid")}
+                    className={`px-4 py-2.5 rounded-xl font-semibold text-sm transition-all ${
+                      filterStatus === "unpaid"
+                        ? "bg-amber-600 text-white shadow-md"
+                        : "bg-white text-slate-700 border border-slate-300 hover:bg-slate-100"
+                    }`}
+                  >
+                    Unpaid ({paymentSummary.unpaidCount})
+                  </button>
+                </div>
+              </div>
+            </div>
 
-                  {/* Final Budget */}
-                  {event.finalBudget && (
-                    <div className="flex items-start gap-3 flex-row-reverse">
-                      <div className="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center flex-shrink-0">
-                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                      </div>
-                      <div className="flex-1 flex justify-end">
-                        <div className="bg-purple-100 rounded-2xl rounded-tr-md px-4 py-3 max-w-md">
-                          <div className="text-sm text-purple-600 font-medium mb-2">Final Agreement</div>
-                          <div className="text-xl font-bold text-purple-800">${event.finalBudget.toLocaleString()}</div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Negotiation History */}
-                  {event.budgetNegotiationHistory && event.budgetNegotiationHistory.length > 0 && (
-                    <>
-                      {event.budgetNegotiationHistory
-                        .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
-                        .map((item, index) => (
-                        <div key={index} className={`flex items-start gap-3 ${item.proposer === 'admin' ? 'flex-row-reverse' : ''}`}>
-                          <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                            item.proposer === 'admin' ? 'bg-red-500' : 'bg-green-500'
+            {/* Attendees List */}
+            <div className="overflow-y-auto" style={{ maxHeight: 'calc(85vh - 250px)' }}>
+              <div className="p-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {paymentSummary.rows
+                    .filter(row => {
+                      const matchesSearch = row.name.toLowerCase().includes(searchQuery.toLowerCase());
+                      const matchesFilter = filterStatus === "all" || row.status === filterStatus;
+                      return matchesSearch && matchesFilter;
+                    })
+                    .map((row, idx) => (
+                      <div 
+                        key={`${row.userId}-${row.status}-${idx}`} 
+                        className="flex items-center justify-between rounded-xl border-2 border-slate-200 bg-gradient-to-br from-white to-slate-50 px-4 py-3.5 hover:shadow-md hover:border-indigo-300 transition-all duration-200 transform hover:scale-[1.02]"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white ${
+                            row.status === "paid" 
+                              ? "bg-gradient-to-br from-emerald-400 to-emerald-600" 
+                              : "bg-gradient-to-br from-amber-400 to-amber-600"
                           }`}>
-                            {item.proposer === 'admin' ? (
-                              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                              </svg>
-                            ) : (
-                              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                              </svg>
-                            )}
+                            {row.name.charAt(0).toUpperCase()}
                           </div>
-                          <div className={`flex-1 ${item.proposer === 'admin' ? 'flex justify-end' : ''}`}>
-                            <div className={`rounded-2xl px-4 py-3 max-w-md ${
-                              item.proposer === 'admin'
-                                ? 'bg-red-100 rounded-tr-md'
-                                : 'bg-green-100 rounded-tl-md'
-                            }`}>
-                              <div className={`text-sm font-medium mb-2 ${
-                                item.proposer === 'admin' ? 'text-red-600' : 'text-green-600'
-                              }`}>
-                                {item.proposer === 'admin' ? 'Admin Counter-Proposal' : 'Your Counter-Proposal'}
-                              </div>
-                              <div className={`text-xl font-bold ${
-                                item.proposer === 'admin' ? 'text-red-800' : 'text-green-800'
-                              }`}>
-                                ${item.amount.toLocaleString()}
-                              </div>
-                              {item.message && (
-                                <div className={`text-sm mt-3 p-3 rounded-lg ${
-                                  item.proposer === 'admin' ? 'bg-red-200' : 'bg-green-200'
-                                }`}>
-                                  "{item.message}"
-                                </div>
-                              )}
-                            </div>
-                            <div className={`text-xs text-gray-500 mt-1 ${
-                              item.proposer === 'admin' ? 'text-right mr-2' : 'ml-2'
-                            }`}>
-                              {new Date(item.timestamp).toLocaleDateString()} {new Date(item.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                            </div>
-                          </div>
+                          <span className="text-sm font-semibold text-slate-800">{row.name}</span>
                         </div>
-                      ))}
-                    </>
-                  )}
+                        <span className={`text-xs font-bold px-3 py-1.5 rounded-full shadow-sm ${
+                          row.status === "paid"
+                            ? "bg-emerald-100 text-emerald-700 border-2 border-emerald-300"
+                            : "bg-amber-100 text-amber-700 border-2 border-amber-300"
+                        }`}>
+                          {row.status === "paid" ? "✓ Paid" : "⏱ Unpaid"}
+                        </span>
+                      </div>
+                    ))}
                 </div>
-              </div>
 
-              {/* Action Buttons */}
-              {event.adminProposedBudget && event.budgetStatus === 'negotiating' && (
-                <div className="flex gap-3 mt-6 pt-4 border-t border-gray-200">
-                  <button
-                    onClick={() => onBudgetResponse?.(event._id, true)}
-                    className="flex-1 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium flex items-center justify-center gap-2"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                    Accept Proposal
-                  </button>
-                  <button
-                    onClick={() => {
-                      const counterProposal = prompt('Enter your counter-proposal amount:');
-                      if (counterProposal) {
-                        const amount = parseFloat(counterProposal);
-                        if (!isNaN(amount) && amount > 0) {
-                          const message = prompt('Add a message (optional):');
-                          onBudgetResponse?.(event._id, false, amount, message || undefined);
-                          setShowBudgetModal(false);
-                        }
-                      }
-                    }}
-                    className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center justify-center gap-2"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                    </svg>
-                    Counter-Propose
-                  </button>
-                  <button
-                    onClick={() => {
-                      const message = prompt('Reason for rejection (optional):');
-                      onBudgetResponse?.(event._id, false, undefined, message || undefined);
-                      setShowBudgetModal(false);
-                    }}
-                    className="flex-1 px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium flex items-center justify-center gap-2"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                    Reject
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </>
-    );
-  }
-
-  return (
-    <div className="bg-white rounded-[25px] shadow-xl hover:shadow-2xl transition-all duration-300 p-8 hover:scale-[1.02] border border-white/50 group">
-      {/* Event Title with Gradient */}
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="text-2xl font-bold text-gray-800 bg-gradient-to-r from-[var(--primary)] to-[var(--primary-light)] bg-clip-text text-transparent group-hover:from-[var(--primary-light)] group-hover:to-[var(--primary)] transition-all duration-300">
-          🎉 {event.title}
-        </h3>
-        {event.isPublic && (
-          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">
-            <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-            </svg>
-            Public
-          </span>
-        )}
-      </div>
-
-      {/* Description */}
-      <p className="text-[var(--text-secondary)] mb-6 line-clamp-3 leading-relaxed font-['Poppins'] text-[16px]">
-        {event.description}
-      </p>
-
-      {/* Event Details */}
-      <div className="space-y-3 text-sm">
-        <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-[var(--primary-light)] to-[var(--surface)] rounded-xl">
-          <span className="text-lg">📅</span>
-          <div>
-            <p className="font-semibold text-[var(--primary)] font-['Plus_Jakarta_Sans']">Start Date</p>
-            <p className="text-[var(--text-secondary)] font-['Poppins']">{formatDate(event.startDate)}</p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-[var(--primary-light)] to-[var(--surface)] rounded-xl">
-          <span className="text-lg">⏰</span>
-          <div>
-            <p className="font-semibold text-[var(--primary)] font-['Plus_Jakarta_Sans']">End Date</p>
-            <p className="text-[var(--text-secondary)] font-['Poppins']">{formatDate(event.endDate)}</p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-[var(--primary-light)] to-[var(--surface)] rounded-xl">
-          <span className="text-lg">📍</span>
-          <div>
-            <p className="font-semibold text-[var(--primary)] font-['Plus_Jakarta_Sans']">Location</p>
-            <p className="text-[var(--text-secondary)] font-['Poppins']">{event.location}</p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-[var(--primary-light)] to-[var(--surface)] rounded-xl">
-          <span className="text-lg">🏷️</span>
-          <div>
-            <p className="font-semibold text-[var(--primary)] font-['Plus_Jakarta_Sans']">Category</p>
-            <p className="text-[var(--text-secondary)] font-['Poppins']">{event.category}</p>
-          </div>
-        </div>
-
-        {event.capacity && (
-          <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-[var(--primary-light)] to-[var(--surface)] rounded-xl">
-            <span className="text-lg">👥</span>
-            <div>
-              <p className="font-semibold text-[var(--primary)] font-['Plus_Jakarta_Sans']">Capacity</p>
-              <p className="text-[var(--text-secondary)] font-['Poppins']">
-                {event.attendees?.length || 0} / {event.capacity} attending
-                {availableSeats !== null && availableSeats > 0 && (
-                  <span className="text-green-600 font-medium ml-1">
-                    ({availableSeats} seats left)
-                  </span>
+                {/* Empty State */}
+                {paymentSummary.rows.filter(row => {
+                  const matchesSearch = row.name.toLowerCase().includes(searchQuery.toLowerCase());
+                  const matchesFilter = filterStatus === "all" || row.status === filterStatus;
+                  return matchesSearch && matchesFilter;
+                }).length === 0 && (
+                  <div className="text-center py-12">
+                    <div className="text-6xl mb-4">🔍</div>
+                    <p className="text-slate-600 font-semibold">No attendees found</p>
+                    <p className="text-slate-400 text-sm mt-1">Try adjusting your search or filter</p>
+                  </div>
                 )}
-                {isFull && (
-                  <span className="text-red-600 font-medium ml-1">
-                    (Full)
-                  </span>
+
+                {/* Recent Updates */}
+                {paymentNotifications.length > 0 && filterStatus === "all" && !searchQuery && (
+                  <div className="mt-6 rounded-2xl border-2 border-indigo-200 bg-gradient-to-br from-indigo-50 to-purple-50 p-5">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center">
+                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                      </div>
+                      <p className="text-sm font-bold text-indigo-900">Recent Payment Updates</p>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      {paymentNotifications.slice(0, 5).map((notice) => {
+                        const shortId = notice.userId ? notice.userId.slice(0, 6) : "user";
+                        return (
+                          <div key={`${notice.userId}-${notice.timestamp}`} className="text-xs text-indigo-700 bg-white/60 rounded-lg px-3 py-2">
+                            <span className="font-semibold">User {shortId}</span> marked as{" "}
+                            <span className={`font-bold ${
+                              notice.status === "paid" ? "text-emerald-700" : "text-amber-700"
+                            }`}>
+                              {notice.status}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
                 )}
-              </p>
-            </div>
-          </div>
-        )}
-
-        {event.ticketPrice && event.ticketPrice > 0 && (
-          <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-[var(--primary)] to-[var(--primary-light)] rounded-xl text-white">
-            <span className="text-lg">💰</span>
-            <div>
-              <p className="font-semibold font-['Plus_Jakarta_Sans']">Ticket Price</p>
-              <p className="font-['Poppins'] font-bold text-xl">${event.ticketPrice}</p>
-            </div>
-          </div>
-        )}
-
-        {/* Budget Icon for Organizers */}
-        {isOrganizer && (event.proposedBudget || event.adminProposedBudget || event.finalBudget) && (
-          <div className="mt-4 flex items-center justify-between p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                </svg>
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-blue-800">Budget Conversation</p>
-                <p className="text-xs text-blue-600">
-                  {event.budgetStatus ? event.budgetStatus.charAt(0).toUpperCase() + event.budgetStatus.slice(1) : 'Unknown'} • 
-                  {event.finalBudget ? `Final: $${event.finalBudget.toLocaleString()}` : 
-                   event.adminProposedBudget ? `Admin: $${event.adminProposedBudget.toLocaleString()}` :
-                   event.proposedBudget ? `Your: $${event.proposedBudget.toLocaleString()}` : 'No proposals yet'}
-                </p>
               </div>
             </div>
-            <button
-              onClick={() => setShowBudgetModal(true)}
-              className="px-3 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center gap-1"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-              </svg>
-              View Chat
-            </button>
           </div>
-        )}
-      </div>
-
-      {showActions && isOrganizer && (
-        <div className="flex gap-3 mt-6 pt-6 border-t border-gray-200">
-          <button
-            onClick={() => onEdit?.(event)}
-            className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors"
-          >
-            ✏️ Edit
-          </button>
-          <button
-            onClick={() => {
-              if (confirm('Are you sure you want to delete this event?')) {
-                onDelete?.(event._id);
-              }
-            }}
-            className="flex-1 bg-red-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-700 transition-colors"
-          >
-            🗑️ Delete
-          </button>
-        </div>
-      )}
-
-      {/* Show Leave button for attendees in My Events */}
-      {showActions && !isOrganizer && isUserAttending && (
-        <div className="flex gap-3 mt-6 pt-6 border-t border-gray-200">
-          <button
-            onClick={() => onLeave?.(event._id)}
-            className="flex-1 bg-red-500 text-white px-4 py-3 rounded-lg font-medium hover:bg-red-600 transition-colors flex items-center justify-center gap-2"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-            Leave Event
-          </button>
-        </div>
-      )}
-
-      {/* Public Event Actions */}
-      {event.isPublic && isLoggedIn && !showActions && (
-        <div className="flex gap-3 mt-6 pt-6 border-t border-gray-200">
-          {isUserAttending ? (
-            <button
-              onClick={() => onLeave?.(event._id)}
-              className="flex-1 bg-red-500 text-white px-4 py-3 rounded-lg font-medium hover:bg-red-600 transition-colors flex items-center justify-center gap-2"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-              Leave Event
-            </button>
-          ) : (
-            <button
-              onClick={() => onJoin?.(event._id)}
-              disabled={isFull}
-              className={`flex-1 px-4 py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 ${
-                isFull
-                  ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
-                  : 'bg-gradient-to-r from-[var(--primary)] to-[var(--primary-light)] text-white hover:from-[var(--primary-light)] hover:to-[var(--primary)]'
-              }`}
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-              </svg>
-              {isFull ? 'Event Full' : 'Join Event'}
-            </button>
-          )}
-          <button className="px-4 py-3 border border-[var(--primary)] text-[var(--primary)] rounded-lg font-medium hover:bg-[var(--primary)] hover:text-white transition-colors">
-            View Details
-          </button>
         </div>
       )}
     </div>
   );
-}
+};

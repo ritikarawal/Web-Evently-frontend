@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import NavigationBar from '@/components/NavigationBar';
 import { getUserNotifications, markNotificationAsRead, markAllNotificationsAsRead, deleteNotification, Notification } from '@/lib/api/notifications';
 import { Bell, Check, X, Trash2, CheckCheck } from 'lucide-react';
+import Sidebar from "@/components/Sidebar";
 
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -77,11 +77,9 @@ export default function NotificationsPage() {
   const handleMarkAllAsRead = async () => {
     try {
       await markAllNotificationsAsRead();
-      setNotifications(prev =>
-        prev.map(notif => ({ ...notif, isRead: true }))
-      );
+      setNotifications(prev => prev.map(notif => ({ ...notif, isRead: true })));
     } catch (error) {
-      console.error('Failed to mark all notifications as read:', error);
+      console.error('Failed to mark all as read:', error);
     }
   };
 
@@ -125,12 +123,13 @@ export default function NotificationsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <NavigationBar profilePicture={profilePicture} />
-        <div className="max-w-4xl mx-auto px-6 py-12">
-          <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-            <span className="ml-2 text-gray-600">Loading notifications...</span>
+      <div className="flex min-h-screen">
+        <div className="flex-1">
+          <div className="max-w-4xl mx-auto px-6 py-12">
+            <div className="flex items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <span className="ml-2 text-gray-600">Loading notifications...</span>
+            </div>
           </div>
         </div>
       </div>
@@ -139,12 +138,13 @@ export default function NotificationsPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <NavigationBar profilePicture={profilePicture} />
-        <div className="max-w-4xl mx-auto px-6 py-12">
-          <div className="text-center py-12">
-            <div className="text-red-600 mb-4">⚠️ Error loading notifications</div>
-            <p className="text-gray-600">{error}</p>
+      <div className="flex min-h-screen">
+        <div className="flex-1">
+          <div className="max-w-4xl mx-auto px-6 py-12">
+            <div className="text-center py-12">
+              <div className="text-red-600 mb-4">⚠️ Error loading notifications</div>
+              <p className="text-gray-600">{error}</p>
+            </div>
           </div>
         </div>
       </div>
@@ -152,99 +152,95 @@ export default function NotificationsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <NavigationBar profilePicture={profilePicture} />
-
-      <main className="max-w-4xl mx-auto px-6 py-12">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            <Bell className="w-8 h-8 text-gray-700" />
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Notifications</h1>
-              {unreadCount > 0 && (
-                <p className="text-gray-600 mt-1">{unreadCount} unread notification{unreadCount !== 1 ? 's' : ''}</p>
-              )}
-            </div>
+    <main className="flex-1 max-w-4xl mx-auto px-6 py-12">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center gap-4">
+          <Bell className="w-8 h-8 text-gray-700" />
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Notifications</h1>
+            {unreadCount > 0 && (
+              <p className="text-gray-600 mt-1">{unreadCount} unread notification{unreadCount !== 1 ? 's' : ''}</p>
+            )}
           </div>
-
-          {notifications.length > 0 && unreadCount > 0 && (
-            <button
-              onClick={handleMarkAllAsRead}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              <CheckCheck className="w-4 h-4" />
-              Mark all as read
-            </button>
-          )}
         </div>
 
-        {/* Notifications List */}
-        <div className="space-y-4">
-          {notifications.length === 0 ? (
-            <div className="text-center py-12">
-              <Bell className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-xl font-medium text-gray-900 mb-2">No notifications yet</h3>
-              <p className="text-gray-600">You'll receive notifications about your events here.</p>
-            </div>
-          ) : (
-            notifications.map((notification) => (
-              <div
-                key={notification._id}
-                className={`bg-white rounded-lg shadow-sm border p-6 transition-all ${
-                  !notification.isRead
-                    ? 'border-blue-200 bg-blue-50'
-                    : 'border-gray-200'
-                }`}
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <span className="text-2xl">{getNotificationIcon(notification.type)}</span>
-                      <h3 className="text-lg font-semibold text-gray-900">
-                        {notification.title}
-                      </h3>
-                      {!notification.isRead && (
-                        <span className="w-3 h-3 bg-blue-500 rounded-full"></span>
-                      )}
-                    </div>
+        {notifications.length > 0 && unreadCount > 0 && (
+          <button
+            onClick={handleMarkAllAsRead}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <CheckCheck className="w-4 h-4" />
+            Mark all as read
+          </button>
+        )}
+      </div>
 
-                    <p className="text-gray-700 mb-3 leading-relaxed">
-                      {notification.message}
+      {/* Notifications List */}
+      <div className="space-y-4">
+        {notifications.length === 0 ? (
+          <div className="text-center py-12">
+            <Bell className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-xl font-medium text-gray-900 mb-2">No notifications yet</h3>
+            <p className="text-gray-600">You'll receive notifications about your events here.</p>
+          </div>
+        ) : (
+          notifications.map((notification) => (
+            <div
+              key={notification._id}
+              className={`bg-white rounded-lg shadow-sm border p-6 transition-all ${
+                !notification.isRead
+                  ? 'border-blue-200 bg-blue-50'
+                  : 'border-gray-200'
+              }`}
+            >
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="text-2xl">{getNotificationIcon(notification.type)}</span>
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      {notification.title}
+                    </h3>
+                    {!notification.isRead && (
+                      <span className="w-3 h-3 bg-blue-500 rounded-full"></span>
+                    )}
+                  </div>
+
+                  <p className="text-gray-700 mb-3 leading-relaxed">
+                    {notification.message}
+                  </p>
+
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm text-gray-500">
+                      {formatDate(notification.createdAt)}
                     </p>
 
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm text-gray-500">
-                        {formatDate(notification.createdAt)}
-                      </p>
-
-                      <div className="flex gap-2">
-                        {!notification.isRead && (
-                          <button
-                            onClick={() => handleMarkAsRead(notification._id)}
-                            className="flex items-center gap-1 px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
-                          >
-                            <Check className="w-3 h-3" />
-                            Mark as read
-                          </button>
-                        )}
-
+                    <div className="flex gap-2">
+                      {!notification.isRead && (
                         <button
-                          onClick={() => handleDeleteNotification(notification._id)}
-                          className="flex items-center gap-1 px-3 py-1 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
+                          onClick={() => handleMarkAsRead(notification._id)}
+                          className="flex items-center gap-1 px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
                         >
-                          <Trash2 className="w-3 h-3" />
-                          Delete
+                          <Check className="w-3 h-3" />
+                          Mark as read
                         </button>
-                      </div>
+                      )}
+
+                      <button
+                        onClick={() => handleDeleteNotification(notification._id)}
+                        className="flex items-center gap-1 px-3 py-1 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                        Delete
+                      </button>
                     </div>
                   </div>
                 </div>
               </div>
-            ))
-          )}
-        </div>
-      </main>
-    </div>
+            </div>
+          ))
+        )}
+      </div>
+    </main>
   );
 }

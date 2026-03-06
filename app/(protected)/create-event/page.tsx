@@ -5,16 +5,78 @@ import { useSearchParams } from 'next/navigation';
 import { ChevronLeft, ChevronRight, MapPin, Calendar, Clock, Upload, Star, Users, Check } from 'lucide-react';
 import Link from 'next/link';
 import { createEvent, updateEvent } from '@/lib/api/events';
-import NavigationBar from "@/components/NavigationBar";
+import * as venuesApi from '@/lib/api/venues';
 
 function CreateEventContent() {
+      // Paid/Free option for public events
+      const [eventType, setEventType] = useState<'paid' | 'free'>('free');
+      const [ticketPrice, setTicketPrice] = useState('');
+    // --- Total Price Calculation ---
+    const [venueDetails, setVenueDetails] = useState<any>(null);
+    const [calculatedPrice, setCalculatedPrice] = useState<number | null>(null);
+
+    const [startTime, setStartTime] = useState('');
+    const [endTime, setEndTime] = useState('');
+
+    // recommended venues removed from quick create per request
+    const [recommendedVenues, setRecommendedVenues] = useState<any[]>([]);
+    const [recommendedLoading, setRecommendedLoading] = useState(false);
+    const [selectedVenue, setSelectedVenue] = useState('');
+
+    // Fetch venue details when selectedVenue changes
+    useEffect(() => {
+      if (!selectedVenue) {
+        setVenueDetails(null);
+        return;
+      }
+      // Try to find in recommendedVenues first
+      const found = recommendedVenues.find(v => v.name === selectedVenue);
+      if (found) {
+        setVenueDetails(found);
+        return;
+      }
+      // Otherwise, fetch by name (if API supports it)
+      venuesApi.getVenues({ name: selectedVenue }).then((venues) => {
+        setVenueDetails(venues && venues.length > 0 ? venues[0] : null);
+      }).catch(() => setVenueDetails(null));
+    }, [selectedVenue, recommendedVenues]);
+
+    // Calculate price when venueDetails or time changes
+    useEffect(() => {
+      if (!venueDetails || !startTime || !endTime) {
+        setCalculatedPrice(null);
+        return;
+      }
+      const pricing = [
+        { type: 'hourly', amount: venueDetails.pricePerHour },
+        { type: 'daily', amount: venueDetails.pricePerDay }
+      ].filter(p => p.amount);
+      const start = new Date();
+      const end = new Date();
+      // Use today's date, just set hours/minutes
+      const [sh, sm] = startTime.split(':').map(Number);
+      const [eh, em] = endTime.split(':').map(Number);
+      start.setHours(sh || 0, sm || 0, 0, 0);
+      end.setHours(eh || 0, em || 0, 0, 0);
+      const durationMs = end.getTime() - start.getTime();
+      const hourlyPricing = pricing.find(p => p.type === 'hourly');
+      const dailyPricing = pricing.find(p => p.type === 'daily');
+      
+      if (hourlyPricing && durationMs > 0) {
+        const hours = Math.ceil(durationMs / (1000 * 60 * 60));
+        setCalculatedPrice(hours * hourlyPricing.amount);
+      } else if (dailyPricing && durationMs > 0) {
+        const days = Math.ceil(durationMs / (1000 * 60 * 60 * 24));
+        setCalculatedPrice(days * dailyPricing.amount);
+      } else {
+        setCalculatedPrice(null);
+      }
+    }, [venueDetails, startTime, endTime]);
   const searchParams = useSearchParams();
   const [currentStep, setCurrentStep] = useState(1);
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [startTime, setStartTime] = useState('');
-  const [endTime, setEndTime] = useState('');
   const [description, setDescription] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [loading, setLoading] = useState(false);
@@ -22,10 +84,7 @@ function CreateEventContent() {
   const [isEditing, setIsEditing] = useState(false);
   const [editEventId, setEditEventId] = useState<string | null>(null);
   const [eventTitle, setEventTitle] = useState('');
-  const [selectedVenue, setSelectedVenue] = useState('');
   const [isPublic, setIsPublic] = useState(true);
-  const [capacity, setCapacity] = useState<string>('');
-  const [proposedBudget, setProposedBudget] = useState<string>('');
 
   const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -35,56 +94,6 @@ function CreateEventContent() {
     { number: 3, title: 'Venue', description: 'Where it happens' },
     { number: 4, title: 'Review', description: 'Confirm details' }
   ];
-
-  // Venue recommendations based on event category
-  const venuesByCategory: Record<string, Array<{
-    name: string;
-    location: string;
-    rating: number;
-    price: string;
-    capacity: string;
-  }>> = {
-    birthday: [
-      { name: 'Party Palace Kathmandu', location: 'Thamel', rating: 4.8, price: '$$', capacity: '50-100' },
-      { name: 'Celebration Hall', location: 'Lazimpat', rating: 4.6, price: '$$$', capacity: '100-150' },
-      { name: 'Fun Zone Events', location: 'Durbarmarg', rating: 4.5, price: '$$', capacity: '30-80' }
-    ],
-    education: [
-      { name: 'Academic Hall', location: 'Kirtipur', rating: 4.5, price: '$', capacity: '100-200' },
-      { name: 'Learning Hub', location: 'Putalisadak', rating: 4.6, price: '$$', capacity: '30-50' },
-      { name: 'Innovation Lab', location: 'Kupondole', rating: 4.8, price: '$$$', capacity: '40-60' }
-    ],
-    business: [
-      { name: 'Business Hub Kathmandu', location: 'Durbar Marg', rating: 4.7, price: '$$$', capacity: '100-200' },
-      { name: 'Executive Meeting Space', location: 'Baluwatar', rating: 4.8, price: '$$$$', capacity: '50-100' },
-      { name: 'Professional Center', location: 'New Baneshwor', rating: 4.7, price: '$$', capacity: '80-150' }
-    ],
-    entertainment: [
-      { name: 'Grand Celebration Center', location: 'Naxal', rating: 4.7, price: '$$$', capacity: '250-350' },
-      { name: 'Fun Zone Events', location: 'Durbarmarg', rating: 4.5, price: '$$', capacity: '30-80' },
-      { name: 'Modern Display Hall', location: 'Tripureshwor', rating: 4.4, price: '$$', capacity: '200-300' }
-    ],
-    graduation: [
-      { name: 'University Auditorium', location: 'Kirtipur', rating: 4.6, price: '$$', capacity: '300-500' },
-      { name: 'Graduation Hall', location: 'Pulchowk', rating: 4.7, price: '$$$', capacity: '200-400' },
-      { name: 'Academic Center', location: 'Balkhu', rating: 4.5, price: '$$', capacity: '150-300' }
-    ],
-    anniversary: [
-      { name: 'Romantic Garden Restaurant', location: 'Lazimpat', rating: 4.8, price: '$$$$', capacity: '20-50' },
-      { name: 'Anniversary Banquet Hall', location: 'Thamel', rating: 4.7, price: '$$$', capacity: '50-100' },
-      { name: 'Couples Retreat Center', location: 'Bouddha', rating: 4.6, price: '$$$', capacity: '30-80' }
-    ],
-    other: [
-      { name: 'Community Center', location: 'Kalanki', rating: 4.4, price: '$', capacity: '50-150' },
-      { name: 'Local Hall', location: 'Swayambhu', rating: 4.3, price: '$', capacity: '30-100' },
-      { name: 'Multi-purpose Venue', location: 'Chabahil', rating: 4.5, price: '$$', capacity: '100-200' }
-    ]
-  };
-
-  const getRecommendedVenues = () => {
-    return venuesByCategory[selectedCategory] || [];
-  };
-
   useEffect(() => {
     const categoryParam = searchParams.get('category');
     if (categoryParam) {
@@ -106,7 +115,7 @@ function CreateEventContent() {
         setDescription(event.description);
         setSelectedVenue(event.location || '');
         setIsPublic(event.isPublic !== false); // Default to true if not specified
-        setCapacity(event.capacity ? event.capacity.toString() : '');
+        // Removed setCapacity
         localStorage.removeItem('editEvent');
       } catch (error) {
         console.error('Error parsing edit event data:', error);
@@ -190,7 +199,7 @@ function CreateEventContent() {
   const canProceedToNextStep = () => {
     switch (currentStep) {
       case 1:
-        return eventTitle.trim() !== '' && selectedCategory !== '' && proposedBudget !== '' && parseFloat(proposedBudget) > 0;
+        return eventTitle.trim() !== '' && selectedCategory !== '';
       case 2:
         return startDate !== null;
       case 3:
@@ -229,11 +238,11 @@ function CreateEventContent() {
         location: selectedVenue || 'TBD',
         category: selectedCategory.toLowerCase(),
         isPublic: isPublic,
-        capacity: capacity ? parseInt(capacity) : undefined,
-        proposedBudget: proposedBudget ? parseFloat(proposedBudget) : 0,
         status: 'pending',
         duration: `${startTime} - ${endTime}`,
         notes: description,
+        eventType: eventType,
+        ticketPrice: eventType === 'paid' ? Number(ticketPrice) : 0,
       };
 
       if (isEditing && editEventId) {
@@ -242,6 +251,9 @@ function CreateEventContent() {
       } else {
         await createEvent(eventData);
         setMessage('Event created successfully!');
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('event-created', 'true');
+        }
       }
 
       setTimeout(() => {
@@ -254,77 +266,37 @@ function CreateEventContent() {
     }
   };
 
-  const recommendedVenues = getRecommendedVenues();
+  // (moved up)
+  const fetchRecommended = async (category: string) => {
+    if (!category) {
+      setRecommendedVenues([]);
+      return;
+    }
+    setRecommendedLoading(true);
+    try {
+      const res = await venuesApi.getVenues({ recommendedCategory: category.toLowerCase(), isActive: true });
+      setRecommendedVenues(res || []);
+    } catch (err) {
+      console.error('Failed to fetch recommended venues:', err);
+      setRecommendedVenues([]);
+    } finally {
+      setRecommendedLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (selectedCategory) fetchRecommended(selectedCategory);
+  }, [selectedCategory]);
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <NavigationBar profilePicture={null} />
-
       <main className="max-w-4xl mx-auto px-6 py-12">
-        {/* Header */}
-        <div className="flex items-center gap-4 mb-8">
-          <Link href="/home">
-            <button className="w-12 h-12 rounded-xl bg-white hover:bg-gray-100 flex items-center justify-center shadow-sm transition-all">
-              <ChevronLeft className="w-6 h-6 text-gray-600" />
-            </button>
-          </Link>
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">
-              {isEditing ? 'Edit Event' : 'Create Event'}
-            </h1>
-            {selectedCategory && (
-              <p className="text-gray-600 mt-1">{selectedCategory}</p>
-            )}
-          </div>
-        </div>
-
-        {/* Stepper */}
-        <div className="mb-12">
-          <div className="flex items-center justify-between">
-            {steps.map((step, index) => (
-              <div key={step.number} className="flex items-center flex-1">
-                <div className="flex flex-col items-center flex-1">
-                  <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${
-                    currentStep > step.number
-                      ? 'bg-green-500 text-white'
-                      : currentStep === step.number
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-200 text-gray-500'
-                  }`}>
-                    {currentStep > step.number ? (
-                      <Check className="w-6 h-6" />
-                    ) : (
-                      <span className="font-semibold">{step.number}</span>
-                    )}
-                  </div>
-                  <div className="text-center mt-2">
-                    <p className={`text-sm font-medium ${
-                      currentStep >= step.number ? 'text-gray-900' : 'text-gray-500'
-                    }`}>
-                      {step.title}
-                    </p>
-                    <p className="text-xs text-gray-500">{step.description}</p>
-                  </div>
-                </div>
-                {index < steps.length - 1 && (
-                  <div className={`h-1 flex-1 mx-4 rounded transition-all ${
-                    currentStep > step.number ? 'bg-green-500' : 'bg-gray-200'
-                  }`} />
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-
         {/* Step Content */}
         <div className="bg-white rounded-2xl shadow-lg p-8 mb-8 min-h-[500px]">
           {/* Step 1: Basic Info */}
           {currentStep === 1 && (
             <div className="space-y-6">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">Basic Information</h2>
-                <p className="text-gray-600">Tell us about your event</p>
-              </div>
+              {/* Header removed as requested */}
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -335,7 +307,7 @@ function CreateEventContent() {
                   value={eventTitle}
                   onChange={(e) => setEventTitle(e.target.value)}
                   placeholder="Enter your event name"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-lg"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-lg text-black placeholder-gray-400"
                 />
               </div>
 
@@ -343,12 +315,27 @@ function CreateEventContent() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Category *
                 </label>
-                <input
-                  type="text"
+                <select
                   value={selectedCategory}
-                  readOnly
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-700"
-                />
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-black bg-white"
+                >
+                  <option value="">Select a category</option>
+                  <option value="birthday">Birthday</option>
+                  <option value="anniversary">Anniversary</option>
+                  <option value="wedding">Wedding</option>
+                  <option value="engagement">Engagement</option>
+                  <option value="workshop">Workshop</option>
+                  <option value="conference">Conference</option>
+                  <option value="graduation">Graduation</option>
+                  <option value="fundraisers">Fundraisers</option>
+                  <option value="music">Music</option>
+                  <option value="sports">Sports</option>
+                  <option value="education">Education</option>
+                  <option value="business">Business</option>
+                  <option value="entertainment">Entertainment</option>
+                  <option value="other">Other</option>
+                </select>
               </div>
 
               <div>
@@ -360,44 +347,11 @@ function CreateEventContent() {
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Describe your event in detail..."
                   rows={6}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all resize-none"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all resize-none text-black placeholder-gray-400"
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    <Users className="w-4 h-4 inline mr-1" />
-                    Maximum Capacity (Optional)
-                  </label>
-                  <input
-                    type="number"
-                    value={capacity}
-                    onChange={(e) => setCapacity(e.target.value)}
-                    placeholder="e.g. 100"
-                    min="1"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-                  />
-                  <p className="text-gray-500 text-xs mt-1">Leave empty for unlimited capacity</p>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    💰 Proposed Budget *
-                  </label>
-                  <input
-                    type="number"
-                    value={proposedBudget}
-                    onChange={(e) => setProposedBudget(e.target.value)}
-                    placeholder="e.g. 5000"
-                    min="0"
-                    step="0.01"
-                    required
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-                  />
-                  <p className="text-gray-500 text-xs mt-1">Budget will be reviewed by admin before approval</p>
-                </div>
-              </div>
+              {/* Removed Maximum Capacity and Proposed Budget fields */}
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-3">
@@ -441,6 +395,50 @@ function CreateEventContent() {
                     </label>
                   </div>
                 </div>
+                {/* Paid/Free option for public events */}
+                {isPublic && (
+                  <div className="mt-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Event Type *</label>
+                    <div className="flex items-center gap-6">
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          name="eventType"
+                          value="free"
+                          checked={eventType === 'free'}
+                          onChange={() => setEventType('free')}
+                          className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 focus:ring-2"
+                        />
+                        <span className="ml-2">Free</span>
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          name="eventType"
+                          value="paid"
+                          checked={eventType === 'paid'}
+                          onChange={() => setEventType('paid')}
+                          className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 focus:ring-2"
+                        />
+                        <span className="ml-2">Paid</span>
+                      </label>
+                    </div>
+                    {eventType === 'paid' && (
+                      <div className="mt-3">
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Ticket Price ($)</label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={ticketPrice}
+                          onChange={e => setTicketPrice(e.target.value)}
+                          className="w-32 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-black placeholder-gray-400"
+                          placeholder="e.g. 10"
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -464,49 +462,43 @@ function CreateEventContent() {
                     type="time"
                     value={startTime}
                     onChange={(e) => setStartTime(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-black placeholder-gray-400"
                   />
                 </div>
-
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <Clock className="w-4 h-4 inline mr-1" />
                     End Time
                   </label>
                   <input
                     type="time"
                     value={endTime}
                     onChange={(e) => setEndTime(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-black placeholder-gray-400"
                   />
                 </div>
               </div>
 
-              {/* Calendar */}
+              {/* Calendar UI */}
               <div>
                 <div className="flex items-center justify-between mb-4">
-                  <label className="block text-sm font-medium text-gray-700">
-                    <Calendar className="w-4 h-4 inline mr-1" />
-                    Select Date *
-                  </label>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={goToPreviousMonth}
-                      className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                    >
-                      <ChevronLeft className="w-5 h-5 text-gray-600" />
-                    </button>
-                    <span className="px-4 py-2 font-medium text-gray-700">
-                      {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={goToNextMonth}
-                      className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                    >
-                      <ChevronRight className="w-5 h-5 text-gray-600" />
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={goToPreviousMonth}
+                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                  >
+                    <ChevronLeft className="w-5 h-5 text-gray-600" />
+                  </button>
+                  <span className="px-4 py-2 font-medium text-gray-700">
+                    {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={goToNextMonth}
+                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                  >
+                    <ChevronRight className="w-5 h-5 text-gray-600" />
+                  </button>
                 </div>
 
                 <div className="space-y-2">
@@ -570,72 +562,93 @@ function CreateEventContent() {
           {/* Step 3: Venue */}
           {currentStep === 3 && (
             <div className="space-y-6">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">Select Venue</h2>
-                <p className="text-gray-600">Choose a location for your event</p>
-              </div>
-
-              {recommendedVenues.length > 0 && (
+              <div className="space-y-6">
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                    Recommended for {selectedCategory}
-                  </h3>
-                  <div className="space-y-3">
-                    {recommendedVenues.map((venue, index) => (
-                      <div
-                        key={index}
-                        onClick={() => setSelectedVenue(venue.name)}
-                        className={`border-2 rounded-xl p-4 cursor-pointer transition-all ${
-                          selectedVenue === venue.name
-                            ? 'border-blue-500 bg-blue-50'
-                            : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
-                        }`}
-                      >
-                        <div className="flex items-start gap-4">
-                          <input
-                            type="radio"
-                            checked={selectedVenue === venue.name}
-                            onChange={() => setSelectedVenue(venue.name)}
-                            className="mt-1 w-5 h-5 text-blue-600"
-                          />
-                          <div className="flex-1">
-                            <div className="flex items-start justify-between mb-2">
-                              <h4 className="font-semibold text-lg text-gray-900">{venue.name}</h4>
-                              <div className="flex items-center gap-1 bg-yellow-50 px-3 py-1 rounded-full">
-                                <Star className="w-4 h-4 text-yellow-500 fill-current" />
-                                <span className="text-sm font-medium text-gray-700">{venue.rating}</span>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2 text-gray-600 mb-2">
-                              <MapPin className="w-4 h-4" />
-                              <span>{venue.location}</span>
-                            </div>
-                            <div className="flex items-center gap-4 text-sm">
-                              <span className="text-blue-600 font-semibold">{venue.price}</span>
-                              <div className="flex items-center gap-1 text-gray-600">
-                                <Users className="w-4 h-4" />
-                                <span>{venue.capacity} guests</span>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">Select Venue</h2>
+                  <p className="text-gray-600">Choose a location for your event</p>
+                </div>
+                <div className="flex gap-4 mb-4">
+                  <button
+                    type="button"
+                    className={`px-4 py-2 rounded-lg font-semibold border-2 transition-all ${selectedVenue && recommendedVenues.some((v) => v.name === selectedVenue) ? 'bg-blue-600 text-white border-blue-600' : 'bg-black text-white border-black'}`}
+                    onClick={() => setSelectedVenue(recommendedVenues[0]?.name || '')}
+                    disabled={recommendedVenues.length === 0}
+                  >
+                    Recommended Venues
+                  </button>
+                  <button
+                    type="button"
+                    className={`px-4 py-2 rounded-lg font-semibold border-2 transition-all ${selectedVenue && !recommendedVenues.some((v) => v.name === selectedVenue) ? 'bg-blue-600 text-white border-blue-600' : 'bg-black text-white border-black'}`}
+                    onClick={() => setSelectedVenue('')}
+                  >
+                    Custom Venue
+                  </button>
+                </div>
+                {(!selectedVenue || recommendedVenues.some(v => v.name === selectedVenue)) && recommendedVenues.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                      Recommended for {selectedCategory}
+                    </h3>
+                    <div className="space-y-3">
+                      {recommendedLoading ? (
+                        <p className="text-sm text-gray-500">Loading recommendations...</p>
+                      ) : (
+                        recommendedVenues.map((venue, index) => (
+                          <div
+                            key={index}
+                            onClick={() => setSelectedVenue(venue.name)}
+                            className={`border-2 rounded-xl p-4 cursor-pointer transition-all ${
+                              selectedVenue === venue.name
+                                ? 'border-blue-500 bg-blue-50'
+                                : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
+                            }`}
+                          >
+                            <div className="flex items-start gap-4">
+                              <input
+                                type="radio"
+                                checked={selectedVenue === venue.name}
+                                onChange={() => setSelectedVenue(venue.name)}
+                                className="mt-1 w-5 h-5 text-blue-600"
+                              />
+                              <div className="flex-1">
+                                <div className="flex items-start justify-between mb-2">
+                                  <h4 className="font-semibold text-lg text-gray-900">{venue.name}</h4>
+                                  <div className="flex items-center gap-1 bg-yellow-50 px-3 py-1 rounded-full">
+                                    <Star className="w-4 h-4 text-yellow-500 fill-current" />
+                                    <span className="text-sm font-medium text-gray-700">{venue.rating || '—'}</span>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2 text-gray-600 mb-2">
+                                  <MapPin className="w-4 h-4" />
+                                  <span>{venue.city || venue.location || ''}</span>
+                                </div>
+                                <div className="flex items-center gap-4 text-sm">
+                                  <span className="text-blue-600 font-semibold">{venue.pricePerHour ? `$${venue.pricePerHour}/hr` : ''}</span>
+                                  <div className="flex items-center gap-1 text-gray-600">
+                                    <Users className="w-4 h-4" />
+                                    <span>{venue.capacity ? `${venue.capacity} guests` : ''}</span>
+                                  </div>
+                                </div>
                               </div>
                             </div>
                           </div>
-                        </div>
-                      </div>
-                    ))}
+                        ))
+                      )}
+                    </div>
                   </div>
-                </div>
-              )}
-
-              <div className="border-t pt-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Or enter custom venue *
-                </label>
-                <input
-                  type="text"
-                  value={selectedVenue}
-                  onChange={(e) => setSelectedVenue(e.target.value)}
-                  placeholder="Enter venue name or location"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-                />
+                )}
+                {(!recommendedVenues.some(v => v.name === selectedVenue) || recommendedVenues.length === 0) && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Or enter a custom venue</label>
+                    <input
+                      type="text"
+                      value={selectedVenue}
+                      onChange={(e) => setSelectedVenue(e.target.value)}
+                      placeholder="Custom venue name or address"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-black placeholder-gray-400"
+                    />
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -649,6 +662,20 @@ function CreateEventContent() {
               </div>
 
               <div className="space-y-4">
+                {/* Total Price Section */}
+                <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
+                  <h3 className="text-sm font-medium text-yellow-700 mb-1">Total Price</h3>
+                  <p className="text-lg font-bold text-yellow-900">
+                    {calculatedPrice !== null ? `$${calculatedPrice}` : 'Set venue, start, and end time to see total price'}
+                  </p>
+                  {venueDetails && (venueDetails.pricePerHour || venueDetails.pricePerDay) && (
+                    <div className="text-xs text-gray-600 mt-1">
+                      Pricing: {venueDetails.pricePerHour ? `hourly: $${venueDetails.pricePerHour}` : ''}
+                      {venueDetails.pricePerHour && venueDetails.pricePerDay ? ', ' : ''}
+                      {venueDetails.pricePerDay ? `daily: $${venueDetails.pricePerDay}` : ''}
+                    </div>
+                  )}
+                </div>
                 <div className="bg-gray-50 rounded-lg p-4">
                   <h3 className="text-sm font-medium text-gray-500 mb-1">Event Title</h3>
                   <p className="text-lg font-semibold text-gray-900">{eventTitle}</p>
@@ -698,16 +725,7 @@ function CreateEventContent() {
                   <p className="text-lg font-semibold text-gray-900">{selectedVenue}</p>
                 </div>
 
-                {capacity && (
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <h3 className="text-sm font-medium text-gray-500 mb-1">Capacity</h3>
-                    <div className="flex items-center">
-                      <Users className="w-5 h-5 mr-2 text-blue-600" />
-                      <p className="text-lg font-semibold text-blue-700">{capacity} people</p>
-                      <p className="text-sm text-gray-600 ml-2">Maximum attendees allowed</p>
-                    </div>
-                  </div>
-                )}
+                {/* Removed Capacity review section */}
 
                 <div className="bg-gray-50 rounded-lg p-4">
                   <h3 className="text-sm font-medium text-gray-500 mb-1">Visibility</h3>

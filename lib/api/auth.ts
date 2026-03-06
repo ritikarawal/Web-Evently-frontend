@@ -74,7 +74,7 @@ export const login = async (loginData: LoginData) => {
     
 }
 
-export const getProfile = async () => {
+export const getProfile = async (): Promise<any> => {
     try {
         const response = await axios.get(API.AUTH.PROFILE);
         return response.data;
