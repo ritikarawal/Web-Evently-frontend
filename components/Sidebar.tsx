@@ -37,12 +37,18 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
 
   return (
     <aside
-      className={`fixed left-0 top-16 h-[calc(100vh-4rem)] shadow-2xl flex flex-col py-5 z-40 border-r bg-[var(--surface)] transition-all duration-300 ease-in-out ${
+      className={`fixed left-0 top-16 h-[calc(100vh-4rem)] shadow-2xl flex flex-col py-5 z-40 border-r transition-all duration-300 ease-in-out ${
         isCollapsed ? "overflow-hidden" : "overflow-y-auto"
       } ${
         isCollapsed ? "w-[70px] px-2" : "w-[250px] px-4"
       }`}
-      style={{ borderColor: 'var(--border)' }}
+      style={{
+        borderColor: 'var(--border)',
+        background: 'rgba(127,15,35,0.25)', // Rose-tinted glassy effect
+        boxShadow: '0 4px 24px 0 rgba(127,15,35,0.10)',
+        backdropFilter: 'blur(18px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(18px) saturate(180%)',
+      }}
     >
       <button
         onClick={onToggle}

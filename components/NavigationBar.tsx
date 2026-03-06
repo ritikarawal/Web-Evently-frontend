@@ -24,21 +24,25 @@ export default function NavigationBar({ profilePicture, isAdmin = false }: Navig
 
   return (
     <header
-      style={{ background: 'var(--nav-background)' }}
+      style={{
+        background: 'rgba(127,15,35,0.25)', // Rose-tinted glassy effect
+        boxShadow: '0 4px 24px 0 rgba(127,15,35,0.10)',
+        backdropFilter: 'blur(18px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(18px) saturate(180%)',
+        borderBottom: '1.5px solid rgba(127,15,35,0.18)',
+      }}
       className="shadow-2xl sticky top-0 z-50"
     >
       <div className="max-w-7xl mx-auto px-6 py-0 flex items-center justify-between">
         {/* Logo */}
         <div className="flex items-center group">
-          <div className="bg-white/20 backdrop-blur-sm rounded-2xl p-2 group-hover:bg-white/30 transition-all duration-300">
-            <Image
-              src="/evently logo.png"
-              alt="Evently Logo"
-              width={55}
-              height={55}
-              className="object-contain"
-            />
-          </div>
+          <Image
+            src="/evently logo.png"
+            alt="Evently Logo"
+            width={55}
+            height={55}
+            className="object-contain"
+          />
           <span className="ml-3 font-bold text-white text-xl hidden sm:inline" style={{ color: 'var(--nav-selected)' }}>Evently</span>
         </div>
 

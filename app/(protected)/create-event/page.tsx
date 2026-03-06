@@ -251,6 +251,9 @@ function CreateEventContent() {
       } else {
         await createEvent(eventData);
         setMessage('Event created successfully!');
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('event-created', 'true');
+        }
       }
 
       setTimeout(() => {
