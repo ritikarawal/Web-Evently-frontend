@@ -33,7 +33,7 @@ export default function NavigationBar({ profilePicture, isAdmin = false }: Navig
       }}
       className="shadow-2xl sticky top-0 z-50"
     >
-      <div className="max-w-7xl mx-auto px-6 py-0 flex items-center justify-between">
+      <div className="max-w-7xl mx-auto px-6 py-2 flex items-center justify-between">
         {/* Logo */}
         <div className="flex items-center group">
           <Image
@@ -46,24 +46,7 @@ export default function NavigationBar({ profilePicture, isAdmin = false }: Navig
           <span className="ml-3 font-bold text-white text-xl hidden sm:inline" style={{ color: 'var(--nav-selected)' }}>Evently</span>
         </div>
 
-        {/* Search Bar */}
-        <div className="flex-1 max-w-md mx-8 hidden lg:block">
-          <div className="relative">
-            <button className="absolute left-3 top-1/2 -translate-y-1/2 px-3 py-1 bg-white/90 backdrop-blur-sm border-r border-indigo-300/30 rounded-l-lg text-sm text-gray-700 font-medium hover:bg-white transition-colors duration-300">
-              🏷️ Category
-            </button>
-            <input
-              type="text"
-              placeholder="Search events..."
-              className="w-full pl-32 pr-12 py-3 rounded-xl border border-white/30 bg-white/90 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-white/50 text-gray-700 placeholder-gray-500 transition-all duration-300"
-            />
-            <button className="absolute right-2 top-1/2 -translate-y-1/2 bg-gradient-to-r from-indigo-500 to-pink-500 text-white p-2 rounded-lg hover:from-indigo-600 hover:to-pink-600 transition-all duration-300 hover:scale-110 shadow-md">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </button>
-          </div>
-        </div>
+
 
         {/* Notifications and Profile */}
         <div className="flex items-center gap-6">

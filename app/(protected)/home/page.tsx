@@ -96,12 +96,32 @@ export default function HomePage({ sidebarOpen = true }: { sidebarOpen?: boolean
           const username = data?.username;
           setUserName(firstName || username || '');
           if (data?._id) setCurrentUserId(data._id);
+          setIsLoggedIn(true);
         } catch (err) {
           console.error('[HomePage] Failed to fetch profile:', err);
+          setIsLoggedIn(false);
         }
       };
       fetchProfile();
     }, []);
+
+  const handleJoinEvent = async (id: string) => {
+    try {
+      await joinEvent(id);
+      await fetchPublicEvents();
+    } catch (error) {
+      console.error("Failed to join event:", error);
+    }
+  };
+
+  const handleLeaveEvent = async (id: string) => {
+    try {
+      await leaveEvent(id);
+      await fetchPublicEvents();
+    } catch (error) {
+      console.error("Failed to leave event:", error);
+    }
+  };
 
   const getEventUserFlags = (event: Event) => {
     const organizerId = event.organizer?._id;
@@ -177,24 +197,16 @@ export default function HomePage({ sidebarOpen = true }: { sidebarOpen?: boolean
     return "Good evening";
   };
 
-  // Adjust this value to match your navigation bar height (e.g., 64px or 4rem)
-  const NAVBAR_HEIGHT = '4rem';
-  // Sidebar open/close state is now a prop
-  // Sidebar width: open = 240px, collapsed = 80px
-  const sidebarWidth = sidebarOpen ? 240 : 80;
   // Dynamic margin for Quick Start section based on sidebar state
-  const quickStartMarginTop = sidebarOpen ? 'mt-16' : 'mt-8';
+  const quickStartMarginTop = 'mt-0';
   return (
-    <div className="w-screen h-screen fixed top-0 left-0 m-0 p-0">
-      <div style={{ background: 'var(--background)', minHeight: '100vh', width: '100%' }}>
-        <div
-          className={`transition-all duration-300 pt-[${NAVBAR_HEIGHT}]`}
-          style={{ marginLeft: sidebarWidth, transition: 'margin-left 0.3s cubic-bezier(0.4,0,0.2,1)' }}
-        >
+    <div className="w-full h-[calc(100vh-4rem)] overflow-hidden">
+      <div style={{  height: '100%', width: '100%' }}>
+        <div className="transition-all duration-300 h-full flex flex-col px-6 py-4">
           {/* Main content starts here, margin only on content */}
           {/* Place your greeting, create event button, quick create, and events content here as before */}
           {/* Quick Create Section with Greeting */}
-          <div className={`mb-10 ${quickStartMarginTop}`}>
+          <div className={`mb-4 ${quickStartMarginTop}`}>
             <div className="mb-2">
               <span className="text-lg font-semibold" style={{ color: 'var(--primary)' }}>
                 {getGreeting()}, {userName ? userName : 'User'}
@@ -220,12 +232,13 @@ export default function HomePage({ sidebarOpen = true }: { sidebarOpen?: boolean
           </div>
 
           {/* Events Content */}
+          <div className="flex-1 min-h-0">
           {loading ? (
-            <div className="flex justify-center items-center h-64">
+            <div className="flex justify-center items-center h-full">
               <p className="text-gray-700">Loading events...</p>
             </div>
           ) : (
-            <div className="mb-10">
+            <div className="h-full flex flex-col">
               <div className="flex gap-4 mb-6">
                 <button
                   className={`px-6 py-2 rounded-lg font-semibold border transition-colors ${activeTab === 'upcoming' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-blue-600 border-blue-600 hover:bg-blue-50'}`}
@@ -243,6 +256,7 @@ export default function HomePage({ sidebarOpen = true }: { sidebarOpen?: boolean
               {activeTab === 'upcoming' ? (
                 <>
                   <h2 className="text-xl font-bold mb-4" style={{ color: '#1a202c' }}>Upcoming Events</h2>
+                  <div className="flex-1 min-h-0 overflow-y-auto pr-1">
                   {filteredEvents.filter(event => {
                     const now = new Date();
                     const eventDate = new Date(event.startDate || '');
@@ -259,8 +273,6 @@ export default function HomePage({ sidebarOpen = true }: { sidebarOpen?: boolean
                         return eventDate >= now && !isOrganizer;
                       }).map(event => {
                         const { isOrganizer, isUserAttending } = getEventUserFlags(event);
-                        function handleJoinEvent(id: string): void { throw new Error("Function not implemented."); }
-                        function handleLeaveEvent(id: string): void { throw new Error("Function not implemented."); }
                         return (
                           <div className="w-full max-w-sm mx-auto" key={event._id}>
                             <EventCard
@@ -277,10 +289,12 @@ export default function HomePage({ sidebarOpen = true }: { sidebarOpen?: boolean
                       })}
                     </div>
                   )}
+                  </div>
                 </>
               ) : (
                 <>
                   <h2 className="text-xl font-bold mb-4" style={{ color: '#1a202c' }}>Past Events</h2>
+                  <div className="flex-1 min-h-0 overflow-y-auto pr-1">
                   {filteredEvents.filter(event => {
                     const now = new Date();
                     const eventDate = new Date(event.startDate || '');
@@ -297,8 +311,6 @@ export default function HomePage({ sidebarOpen = true }: { sidebarOpen?: boolean
                         return eventDate < now && !isOrganizer;
                       }).map(event => {
                         const { isOrganizer, isUserAttending } = getEventUserFlags(event);
-                        function handleJoinEvent(id: string): void { throw new Error("Function not implemented."); }
-                        function handleLeaveEvent(id: string): void { throw new Error("Function not implemented."); }
                         return (
                           <div className="w-full max-w-sm mx-auto" key={event._id}>
                             <EventCard
@@ -315,10 +327,12 @@ export default function HomePage({ sidebarOpen = true }: { sidebarOpen?: boolean
                       })}
                     </div>
                   )}
+                  </div>
                 </>
               )}
             </div>
           )}
+          </div>
         </div>
       </div>
     </div>

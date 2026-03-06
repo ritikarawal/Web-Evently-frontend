@@ -51,7 +51,7 @@ export default function MyEventsPage() {
         let dataEvents: any[] = [];
 
         try {
-          const response = await getUserEvents();
+          const response = await getUserEvents() as any;
           if (response.success === false) {
             setError(response.message || "Failed to fetch your events");
           } else {
@@ -67,7 +67,7 @@ export default function MyEventsPage() {
         }
 
         if (dataEvents.length === 0) {
-          const response = await getEvents();
+          const response = await getEvents() as any;
           if (response.success) {
             dataEvents = response.data || [];
           }
@@ -118,7 +118,7 @@ export default function MyEventsPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-12">
-      <div className="flex items-center justify-between mb-8">
+      <div className="background: 'var(--background)',flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-bold text-gray-800">Created Events</h1>
           <p className="text-sm text-gray-600 mt-1">Events you have created as organizer</p>

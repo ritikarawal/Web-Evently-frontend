@@ -94,9 +94,11 @@ export const EventCard: React.FC<EventCardProps> = ({
   };
   
   const attendeeCount = getAttendeeCount();
+  const capacityValue = typeof event.capacity === "number" ? event.capacity : null;
+  const hasCapacity = capacityValue !== null;
   const availableSeats =
-    event.capacity !== undefined
-      ? event.capacity - attendeeCount
+    capacityValue !== null
+      ? capacityValue - attendeeCount
       : null;
   const isFull = availableSeats !== null && availableSeats <= 0;
 
@@ -257,27 +259,27 @@ export const EventCard: React.FC<EventCardProps> = ({
 
   // OPENED ENVELOPE VIEW (Full Event Details)
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm animate-fadeIn overflow-y-auto">
-      <div className="min-h-screen flex items-center justify-center p-2 sm:p-6 py-12">
+    <div className="fixed inset-0 z-50 bg-black/55 backdrop-blur-sm animate-fadeIn">
+      <div className="h-screen flex items-center justify-center p-3 sm:p-6">
         <div 
-          className={`relative w-full max-w-7xl min-h-screen bg-gradient-to-br ${theme.bgGradient} rounded-3xl shadow-2xl border-4 ${theme.borderColor} animate-scale-in`}
+          className={`relative w-full max-w-5xl max-h-[90vh] bg-gradient-to-br ${theme.bgGradient} rounded-2xl shadow-2xl border-2 ${theme.borderColor} animate-scale-in overflow-hidden flex flex-col`}
         >
           {/* Decorative Top Border */}
-          <div className={`h-3 w-full bg-gradient-to-r ${theme.topBarGradient} animate-shimmer`}></div>
+          <div className={`h-2 w-full bg-gradient-to-r ${theme.topBarGradient} animate-shimmer`}></div>
 
-          {/* Close Button - Sticky positioning */}
+          {/* Close Button */}
           <button
             onClick={handleCloseEnvelope}
-            className="sticky top-2 float-right mr-4 mt-2 z-20 p-3 rounded-full bg-white/95 hover:bg-white shadow-lg hover:shadow-xl transition-all duration-200 hover:rotate-90 border-2 border-gray-200"
+            className="absolute top-3 right-3 z-20 p-2.5 rounded-full bg-white/95 hover:bg-white shadow-md hover:shadow-lg transition-all duration-200 hover:rotate-90 border border-gray-200"
             title="Close envelope"
           >
-            <X className="w-5 h-5 text-gray-700" />
+            <X className="w-4 h-4 text-gray-700" />
           </button>
 
-          {/* Music Control Button - Sticky positioning */}
+          {/* Music Control Button */}
           <button
             onClick={toggleMusic}
-            className={`sticky top-2 ml-4 mt-2 z-20 px-4 py-2 rounded-full font-semibold text-sm shadow-lg transition-all duration-200 hover:scale-105 border-2 ${
+            className={`absolute top-3 left-3 z-20 px-3 py-1.5 rounded-full font-semibold text-xs shadow-md transition-all duration-200 hover:scale-105 border ${
               isPlayingMusic
                 ? `bg-gradient-to-r ${theme.topBarGradient} text-white border-white/30`
                 : `bg-white/95 ${theme.textColor} ${theme.borderColor}`
@@ -288,10 +290,10 @@ export const EventCard: React.FC<EventCardProps> = ({
           </button>
 
           {/* Opened Card Content */}
-          <div className="p-8 sm:p-12 pt-6">
+          <div className="overflow-y-auto p-5 sm:p-7 pt-14">
           {/* Header with Icon and Title */}
-          <div className="flex items-start gap-4 mb-6">
-            <div className={`flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded-2xl ${theme.iconBg} flex items-center justify-center text-3xl sm:text-4xl shadow-lg border-2 ${theme.borderColor}`}>
+          <div className="flex items-start gap-3 mb-5">
+            <div className={`flex-shrink-0 w-14 h-14 sm:w-16 sm:h-16 rounded-xl ${theme.iconBg} flex items-center justify-center text-2xl sm:text-3xl shadow-md border ${theme.borderColor}`}>
                 {theme.icon}
             </div>
             <div className="flex-1">
@@ -299,15 +301,23 @@ export const EventCard: React.FC<EventCardProps> = ({
                 <span className="text-sm">{theme.icon}</span>
                 <span className={`font-bold ${theme.textColor} text-xs`}>{theme.name}</span>
               </div>
-              <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">{event.title}</h2>
-              <p className={`text-sm font-semibold ${theme.textColor}`}>
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">{event.title}</h2>
+              <p className={`text-xs sm:text-sm font-semibold ${theme.textColor}`}>
                 By {event.organizer?.firstName} {event.organizer?.lastName}
               </p>
             </div>
           </div>
 
           {/* Event Info Grid - Responsive */}
-          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+          <div
+            className={`grid grid-cols-2 sm:grid-cols-2 gap-3 mb-6 ${
+              hasCapacity && isOrganizer
+                ? "lg:grid-cols-4"
+                : hasCapacity || isOrganizer
+                  ? "lg:grid-cols-3"
+                  : "lg:grid-cols-2"
+            }`}
+          >
             <div className={`p-4 rounded-xl ${theme.badgeBg} border-2 ${theme.borderColor} shadow-sm`}>
               <div className="flex items-center gap-2 mb-2">
                 <span className="text-2xl">📅</span>
@@ -322,20 +332,24 @@ export const EventCard: React.FC<EventCardProps> = ({
               </div>
               <p className="text-sm font-semibold text-gray-800">{formatDate(event.endDate)}</p>
             </div>
-            <div className={`p-4 rounded-xl ${theme.badgeBg} border-2 ${theme.borderColor} shadow-sm`}>
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-2xl">🎯</span>
-                <p className={`text-xs font-bold ${theme.textColor}`}>Capacity</p>
+            {hasCapacity && (
+              <div className={`p-4 rounded-xl ${theme.badgeBg} border-2 ${theme.borderColor} shadow-sm`}>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-2xl">🎯</span>
+                  <p className={`text-xs font-bold ${theme.textColor}`}>Capacity</p>
+                </div>
+                <p className="text-sm font-semibold text-gray-800">{capacityValue}</p>
               </div>
-              <p className="text-sm font-semibold text-gray-800">{event.capacity ?? "Unlimited"}</p>
-            </div>
-            <div className={`p-4 rounded-xl ${theme.badgeBg} border-2 ${theme.borderColor} shadow-sm`}>
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-2xl">📊</span>
-                <p className={`text-xs font-bold ${theme.textColor}`}>Status</p>
+            )}
+            {isOrganizer && (
+              <div className={`p-4 rounded-xl ${theme.badgeBg} border-2 ${theme.borderColor} shadow-sm`}>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-2xl">📊</span>
+                  <p className={`text-xs font-bold ${theme.textColor}`}>Status</p>
+                </div>
+                <p className="text-sm font-semibold text-gray-800 capitalize">{event.status || "Active"}</p>
               </div>
-              <p className="text-sm font-semibold text-gray-800 capitalize">{event.status || "Active"}</p>
-            </div>
+            )}
           </div>
 
           {/* Location and Description - Full Width */}
@@ -383,13 +397,13 @@ export const EventCard: React.FC<EventCardProps> = ({
             )}
 
             {/* Attendees Badge */}
-            {event.capacity && (
+            {hasCapacity && (
               <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm border-2 shadow-md animate-pulse ${
                 isFull
                   ? "bg-gradient-to-r from-red-100 to-red-200 text-red-800 border-red-300"
                   : "bg-gradient-to-r from-blue-100 to-blue-200 text-blue-800 border-blue-300"
               }`}>
-                👥 {attendeeCount}/{event.capacity}
+                👥 {attendeeCount}/{capacityValue}
                 {!isFull && availableSeats && availableSeats > 0 && ` • ${availableSeats} spots left`}
                 {isFull && " • SOLD OUT"}
               </div>
@@ -482,7 +496,7 @@ export const EventCard: React.FC<EventCardProps> = ({
             }`}
           >
             {isOrganizer && "Organizer"}
-            {!isOrganizer && !isLoggedIn && "Login to Join"}
+            {!isOrganizer && !isLoggedIn && "Join Event"}
             {!isOrganizer && isLoggedIn && isUserAttending && "Leave Event"}
             {!isOrganizer && isLoggedIn && !isUserAttending && isFull && "Event Full"}
             {!isOrganizer && isLoggedIn && !isUserAttending && !isFull && "Join Event"}

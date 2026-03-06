@@ -87,7 +87,7 @@ export default function ProtectedLayout({ children }: { children: HomePageElemen
       )}
       {/* Main Content */}
       <main
-        className="pt-16 p-9 mt-0 transition-all duration-300 ease-in-out"
+        className="pt-16 mt-0 transition-all duration-300 ease-in-out"
         style={{ marginLeft: hideSidebar ? 0 : `${sidebarWidth}px` }}
       >
         {/* Force-inject sidebarOpen prop into HomePage if present */}
