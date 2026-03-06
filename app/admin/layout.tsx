@@ -8,7 +8,7 @@ const navItems = [
   { label: "Users", href: "/admin/users", icon: <FaUsers className="inline mr-2" /> },
   { label: "Events", href: "/admin/events", icon: <FaCalendarAlt className="inline mr-2" /> },
   { label: "Venues", href: "/admin/venues", icon: <FaMapMarkerAlt className="inline mr-2" /> },
-  { label: "Chat", href: "/admin/chat", icon: <FaComments className="inline mr-2" /> },
+  { label: "Chats", href: "/admin/chats", icon: <FaComments className="inline mr-2" /> },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -32,14 +32,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 {item.label}
               </Link>
             ))}
-            <Link
-              key="/admin/chats"
-              href="/admin/chats"
-              className={`flex items-center gap-2 px-5 py-3 rounded-xl font-semibold text-lg transition-all duration-150 ${pathname === "/admin/chats" ? 'bg-gradient-to-r from-[#800000] to-[#b30000] text-white shadow-lg scale-105' : 'hover:bg-[#800000]/10 text-[#800000]'}`}
-            >
-              <FaComments className="inline mr-2" />
-              Chats
-            </Link>
         </nav>
         <div className="mt-auto text-xs text-gray-400 pt-8">© {new Date().getFullYear()} Evently Admin</div>
       </aside>

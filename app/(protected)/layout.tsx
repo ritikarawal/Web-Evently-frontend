@@ -4,9 +4,6 @@
 import Sidebar from "@/components/Sidebar";
 import NavigationBar from "@/components/NavigationBar";
 import { useEffect, useState, isValidElement, cloneElement } from "react";
-import dynamic from "next/dynamic";
-// Dynamically import ChatBox to avoid SSR issues
-const ChatBox = dynamic(() => import("@/components/ChatBox"), { ssr: false });
 import { usePathname } from "next/navigation";
 import { getProfile } from "@/lib/api/auth";
 
@@ -21,24 +18,12 @@ export default function ProtectedLayout({ children }: { children: HomePageElemen
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [showChat, setShowChat] = useState(false);
   const pathname = usePathname();
   const hideSidebar = pathname.startsWith("/admin");
 
   const expandedWidth = 250;
   const collapsedWidth = 70;
   const sidebarWidth = isCollapsed ? collapsedWidth : expandedWidth;
-  // Listen for event creation flag in localStorage
-  useEffect(() => {
-    const checkChatFlag = () => {
-      if (typeof window !== "undefined") {
-        setShowChat(localStorage.getItem("event-created") === "true");
-      }
-    };
-    checkChatFlag();
-    window.addEventListener("storage", checkChatFlag);
-    return () => window.removeEventListener("storage", checkChatFlag);
-  }, []);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -98,8 +83,6 @@ export default function ProtectedLayout({ children }: { children: HomePageElemen
           ? cloneElement(children, { sidebarOpen: !isCollapsed })
           : children}
       </main>
-      {/* ChatBox always visible for now (frontend test) */}
-      <ChatBox />
     </div>
   );
 }
