@@ -1,18 +1,48 @@
 import React, { useState, useEffect, useRef } from "react";
 import { ChatUseCase } from "@/lib/chat/domain";
 import { ChatRepository } from "@/lib/chat/repository";
+import { getProfile } from "@/lib/api/auth";
 
-const chatUseCase = new ChatUseCase(new ChatRepository());
+const chatRepository = new ChatRepository();
+const chatUseCase = new ChatUseCase(chatRepository);
 
+type ChatMessage = {
+  id?: string | number;
+  from: string;
+  text: string;
+  timestamp?: string | number | Date;
+};
+        
 const ChatBox: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
+  const [userName, setUserName] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    // Get user profile and set userId
+    const setupUser = async () => {
+      try {
+        const response = await getProfile();
+        const data = response?.data || response;
+        setUserName(data?.firstName || data?.username || "User");
+        if (data?._id) {
+          chatRepository.setUserId(data._id);
+        }
+      } catch (error) {
+        console.error("Failed to fetch profile:", error);
+      }
+    };
+
+    setupUser();
+
     const unsubscribe = chatUseCase.subscribeToMessages(setMessages);
-    return unsubscribe;
+    void chatUseCase.getMessages();
+    return () => {
+      unsubscribe();
+      chatRepository.disconnect();
+    };
   }, []);
 
   useEffect(() => {
@@ -23,7 +53,7 @@ const ChatBox: React.FC = () => {
 
   const handleSend = async () => {
     if (input.trim() === "") return;
-    await chatUseCase.sendMessage("user", input);
+    await chatUseCase.sendMessage("user", input, userName);
     setInput("");
   };
 

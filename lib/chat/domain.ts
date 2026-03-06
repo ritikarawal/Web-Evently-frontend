@@ -6,6 +6,7 @@ export interface ChatMessage {
   from: 'user' | 'admin';
   text: string;
   timestamp: number;
+  username?: string;
 }
 
 // Repository interface
@@ -19,8 +20,8 @@ export interface IChatRepository {
 export class ChatUseCase {
   constructor(private repo: IChatRepository) {}
 
-  async sendMessage(from: 'user' | 'admin', text: string) {
-    await this.repo.sendMessage({ from, text });
+  async sendMessage(from: 'user' | 'admin', text: string, username?: string) {
+    await this.repo.sendMessage({ from, text, username });
   }
 
   async getMessages() {

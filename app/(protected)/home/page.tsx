@@ -262,9 +262,8 @@ export default function HomePage({ sidebarOpen = true }: { sidebarOpen?: boolean
                         function handleJoinEvent(id: string): void { throw new Error("Function not implemented."); }
                         function handleLeaveEvent(id: string): void { throw new Error("Function not implemented."); }
                         return (
-                          <div className="w-full max-w-sm mx-auto">
+                          <div className="w-full max-w-sm mx-auto" key={event._id}>
                             <EventCard
-                              key={event._id}
                               event={event}
                               onJoin={handleJoinEvent}
                               onLeave={handleLeaveEvent}
@@ -301,9 +300,8 @@ export default function HomePage({ sidebarOpen = true }: { sidebarOpen?: boolean
                         function handleJoinEvent(id: string): void { throw new Error("Function not implemented."); }
                         function handleLeaveEvent(id: string): void { throw new Error("Function not implemented."); }
                         return (
-                          <div className="w-full max-w-sm mx-auto">
+                          <div className="w-full max-w-sm mx-auto" key={event._id}>
                             <EventCard
-                              key={event._id}
                               event={event}
                               onJoin={handleJoinEvent}
                               onLeave={handleLeaveEvent}
